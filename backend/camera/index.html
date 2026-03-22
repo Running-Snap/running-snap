@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  video { width: 100%; max-width: 480px; border-radius: 12px; }
+  #status { margin: 16px 0; font-size: 18px; font-weight: bold; text-align: center; }
+  .buttons { display: flex; gap: 16px; }
+  button { padding: 16px 48px; font-size: 20px; border-radius: 50px; border: none; cursor: pointer; color: #fff; }
+  #startBtn { background: #e00; }
+  #stopBtn { background: #555; }
+  button:disabled { background: #333; cursor: default; }
+  #log { margin-top: 12px; font-size: 12px; color: #aaa; text-align: center; max-width: 480px; line-height: 1.6; }
+  #gpsInput { display: none; margin: 8px 0; text-align: center; }
+  #gpsInput input { background: #222; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 180px; margin: 4px; }
+  #gpsInput button { padding: 8px 20px; font-size: 14px; border-radius: 20px; background: #e00; }
+</style>
+</head>
+<body>
+
+<video id="preview" autoplay muted playsinline></video>
+<div id="status">준비 중...</div>
+<div class="buttons">
+  <button id="startBtn" onclick="start()" disabled>시작</button>
+  <button id="stopBtn" onclick="stop()">정지</button>
+</div>
+<div id="gpsInput">
+  <div style="color:#aaa; font-size:13px; margin-bottom:4px;">GPS 실패 - 좌표 직접 입력</div>
+  <input id="latInput" type="number" step="any" placeholder="위도 (예: 37.1234)" />
+  <input id="lngInput" type="number" step="any" placeholder="경도 (예: 127.1234)" />
+  <button onclick="setManualGps()">적용</button>
+</div>
+<div id="log"></div>
+
+<script>
+const SERVER = 'https://stephane-unuseful-magnetooptically.ngrok-free.dev';
+const CLIP_DURATION = 20000;
+const OVERLAP_MS = 300; // 다음 클립을 300ms 먼저 시작해서 텀 제거
+
+let stream = null;
+let recorder = null;
+let running = false;
+let cameraLat = 0;
+let cameraLng = 0;
+let clipCount = 0;
+let uploadCount = 0;
+
+const mimeType = (() => {
+  // 안드로이드 구형 Chrome은 webm이 안정적 → webm 우선
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const types = isAndroid
+    ? ['video/webm;codecs=vp8', 'video/webm', 'video/mp4;codecs=avc1', 'video/mp4']
+    : ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return 'video/webm';
+})();
+
+// 페이지 로드 시 선택된 mimeType 확인용
+console.log('선택된 mimeType:', mimeType);
+
+const logLines = [];
+function log(msg) {
+  const time = new Date().toLocaleTimeString('ko-KR');
+  logLines.unshift(`[${time}] ${msg}`);
+  if (logLines.length > 5) logLines.pop();
+  document.getElementById('log').textContent = logLines.join('\n');
+  console.log(msg);
+}
+
+function setManualGps() {
+  const lat = parseFloat(document.getElementById('latInput').value);
+  const lng = parseFloat(document.getElementById('lngInput').value);
+  if (isNaN(lat) || isNaN(lng)) { log('올바른 좌표를 입력해주세요'); return; }
+  cameraLat = lat;
+  cameraLng = lng;
+  document.getElementById('gpsInput').style.display = 'none';
+  log(`카메라 위치 설정: ${cameraLat.toFixed(6)}, ${cameraLng.toFixed(6)}`);
+}
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+
+async function init() {
+  setStatus('GPS 위치 확인 중...');
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 })
+    );
+    cameraLat = pos.coords.latitude;
+    cameraLng = pos.coords.longitude;
+    log(`카메라 위치: ${cameraLat.toFixed(6)}, ${cameraLng.toFixed(6)}`);
+  } catch (e) {
+    log('GPS 실패 - 좌표를 직접 입력해주세요');
+    document.getElementById('gpsInput').style.display = 'block';
+  }
+
+  setStatus('카메라 연결 중...');
+  stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  document.getElementById('preview').srcObject = stream;
+
+  try {
+    await navigator.wakeLock.request('screen');
+    log('화면 꺼짐 방지 활성화');
+  } catch (e) {
+    log('화면 꺼짐 방지 미지원');
+  }
+
+  setStatus('시작 버튼을 누르세요');
+  document.getElementById('startBtn').disabled = false;
+}
+
+function start() {
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  running = true;
+  recordLoop();
+}
+
+function stop() {
+  running = false;
+  if (recorder && recorder.state === 'recording') recorder.stop();
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+  setStatus('정지됨');
+  log('녹화 정지');
+}
+
+
+async function recordLoop() {
+  if (!running) return;
+
+  // 스트림이 살아있으면 재사용, 죽었을 때만 새로 가져옴
+  const isStreamAlive = stream && stream.getTracks().every(t => t.readyState === 'live');
+  if (!isStreamAlive) {
+    try {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      document.getElementById('preview').srcObject = stream;
+      log('카메라 스트림 재연결');
+    } catch (e) {
+      log(`카메라 연결 실패: ${e.message}`);
+      setTimeout(() => recordLoop(), 3000);
+      return;
+    }
+  }
+
+  clipCount++;
+  const clipNum = clipCount;
+  setStatus(`🔴 녹화 중... (${clipNum}번째 클립)`);
+  const clipStartTime = new Date();
+  const startMs = Date.now();
+  const chunks = [];
+
+  let rec;
+  try {
+    rec = new MediaRecorder(stream, { mimeType });
+    recorder = rec;
+  } catch (e) {
+    log(`MediaRecorder 오류: ${e.message}`);
+    setTimeout(() => recordLoop(), 2000);
+    return;
+  }
+
+  rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  rec.onstop = () => {
+    const elapsed = Date.now() - startMs;
+    const clipEndTime = new Date();
+    const blob = new Blob(chunks, { type: mimeType });
+    log(`클립 ${clipNum} 녹화 완료 (${(blob.size / 1024).toFixed(0)}KB, ${(elapsed/1000).toFixed(1)}초)`);
+    if (blob.size > 1000) {
+      uploadClip(blob, clipStartTime, clipEndTime, clipNum);
+    } else {
+      log(`클립 ${clipNum} 크기 너무 작음 - 업로드 건너뜀`);
+    }
+    // 다음 클립은 이미 미리 시작됨 - 여기서 호출 안 함
+  };
+
+  rec.start(1000);
+  log(`클립 ${clipNum} 녹화 시작`);
+
+  // 다음 클립을 OVERLAP_MS 전에 미리 시작 → 텀 제거
+  setTimeout(() => { if (running) recordLoop(); }, CLIP_DURATION - OVERLAP_MS);
+  // 현재 클립 종료
+  setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, CLIP_DURATION);
+}
+
+async function uploadClip(blob, startTime, endTime, clipNum) {
+  const formData = new FormData();
+  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+  formData.append('file', blob, `clip.${ext}`);
+  formData.append('camera_lat', cameraLat);
+  formData.append('camera_lng', cameraLng);
+  formData.append('clip_start', startTime.toISOString());
+  formData.append('clip_end', endTime.toISOString());
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000); // 60초 타임아웃
+    const res = await fetch(`${SERVER}/camera-clip`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    const data = await res.json();
+    uploadCount++;
+    log(`클립 ${clipNum} 업로드 완료 (clip_id=${data.clip_id}, 총 ${uploadCount}개)`);
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      log(`클립 ${clipNum} 업로드 타임아웃`);
+    } else {
+      log(`클립 ${clipNum} 업로드 실패: ${e.message}`);
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>

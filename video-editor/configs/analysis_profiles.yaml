@@ -1,0 +1,111 @@
+# 영상 길이별 분석 프로파일
+profiles:
+  short:
+    duration_range: [0, 10]
+    description: "10초 이하 숏폼 - 역동성과 임팩트 중심"
+    focus_areas:
+      - dynamism
+      - peak_moment
+      - facial_expression
+    frame_sample_rate: 2  # 초당 2프레임
+    analysis_prompt: |
+      이 러닝/운동 영상 프레임을 분석해라.
+
+      집중할 것:
+      1. 역동적인 움직임 (달리는 모습, 팔 동작, 발 움직임)
+      2. 표정 (집중, 고통, 환희, 결의)
+      3. 액션의 피크 순간 (점프, 피니시, 전력질주)
+      4. 구도와 미학적 품질
+
+      다음 JSON 형식으로 응답:
+      {
+        "faces_detected": int,
+        "face_expressions": ["expression1", ...],
+        "motion_level": float (0-1, 높을수록 역동적),
+        "composition_score": float (0-1),
+        "lighting": "good" | "moderate" | "poor",
+        "background_type": "outdoor_nature" | "urban" | "track" | "gym" | "other",
+        "is_action_peak": boolean,
+        "aesthetic_score": float (0-1),
+        "emotional_tone": "determined" | "joyful" | "struggling" | "triumphant" | "focused" | "neutral",
+        "description": "프레임 설명 (1-2문장)"
+      }
+
+  medium:
+    duration_range: [10, 30]
+    description: "30초 영상 - 스토리 아크와 감정 변화"
+    focus_areas:
+      - story_arc
+      - emotional_beats
+      - dynamism
+      - scene_variety
+    frame_sample_rate: 1  # 초당 1프레임
+    analysis_prompt: |
+      이 러닝/운동 영상 프레임을 분석해라.
+
+      집중할 것:
+      1. 스토리 흐름에서의 위치 (시작, 전개, 클라이맥스, 마무리)
+      2. 감정의 강도와 변화
+      3. 움직임의 역동성
+      4. 장면의 다양성
+
+      다음 JSON 형식으로 응답:
+      {
+        "faces_detected": int,
+        "face_expressions": ["expression1", ...],
+        "motion_level": float (0-1),
+        "composition_score": float (0-1),
+        "lighting": "good" | "moderate" | "poor",
+        "background_type": string,
+        "is_action_peak": boolean,
+        "aesthetic_score": float (0-1),
+        "emotional_tone": string,
+        "story_position": "intro" | "development" | "climax" | "resolution",
+        "description": "프레임 설명"
+      }
+
+  long:
+    duration_range: [30, 60]
+    description: "60초 영상 - 내러티브와 캐릭터 모먼트"
+    focus_areas:
+      - narrative
+      - character_moments
+      - scene_variety
+      - emotional_journey
+    frame_sample_rate: 0.5  # 2초당 1프레임
+    analysis_prompt: |
+      이 러닝/운동 영상 프레임을 분석해라.
+
+      집중할 것:
+      1. 내러티브 구조에서의 역할
+      2. 인물의 감정과 캐릭터성
+      3. 장면 전환과 다양성
+      4. 감정적 여정
+
+      다음 JSON 형식으로 응답:
+      {
+        "faces_detected": int,
+        "face_expressions": ["expression1", ...],
+        "motion_level": float (0-1),
+        "composition_score": float (0-1),
+        "lighting": "good" | "moderate" | "poor",
+        "background_type": string,
+        "is_action_peak": boolean,
+        "aesthetic_score": float (0-1),
+        "emotional_tone": string,
+        "narrative_role": "establishing" | "building" | "peak" | "breathing" | "closing",
+        "description": "프레임 설명"
+      }
+
+# 모든 프로파일에 공통 적용
+common_analysis:
+  - face_detection
+  - motion_estimation
+  - composition_evaluation
+  - lighting_assessment
+  - aesthetic_scoring
+
+# 로컬 모델용 샘플링 설정 (Ollama 등 느린 모델용)
+local_mode:
+  max_frames: 10  # 최대 분석 프레임 수
+  sample_strategy: "uniform"  # 균일 샘플링

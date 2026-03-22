@@ -1,0 +1,162 @@
+# 베스트컷 구도 스타일 정의
+# 확장성을 위해 구도 타입과 스타일별 매핑을 분리
+
+# ==========================================
+# 구도 타입 정의 (Composition Types)
+# ==========================================
+composition_types:
+  action_shot:
+    name: "액션 샷"
+    description: "가장 범용적, 광고에서 많이 사용되는 구도"
+    parameters:
+      runner_size_ratio: 0.40      # 화면 대비 러너 크기 (30-50%)
+      horizontal_position: 0.33    # 3분할 법칙 (진행 방향 반대편)
+      vertical_position: 0.50      # 수직 중앙
+      leading_space: 0.60          # 진행 방향 여백 비율
+      headroom: 0.10               # 머리 위 여백
+    rules:
+      - "러너가 진행하는 방향에 여백 60%"
+      - "수평선을 상단 1/3 또는 하단 1/3에 배치"
+      - "러너 머리 위에 약간의 여백"
+
+  environmental:
+    name: "환경 샷"
+    description: "감성적, 배경 중심의 구도"
+    parameters:
+      runner_size_ratio: 0.20      # 화면 대비 러너 크기 (15-25%)
+      horizontal_position: 0.50    # 중앙
+      vertical_position: 0.66      # 하단 1/3
+      background_emphasis: true    # 배경 강조
+      leading_space: 0.50          # 진행 방향 여백
+    rules:
+      - "어디서 달리는가가 스토리의 중심"
+      - "배경이 70-80% 차지"
+      - "러너는 스케일 감각을 위한 요소"
+
+  dynamic_closeup:
+    name: "다이나믹 클로즈업"
+    description: "강렬함, 드라마틱한 순간 포착"
+    parameters:
+      runner_size_ratio: 0.70      # 화면 대비 러너 크기 (60-80%)
+      horizontal_position: 0.45    # 약간 벗어남 (0.45 또는 0.55)
+      vertical_position: 0.33      # 상단 1/3
+      background_blur: true        # 배경 흐림 처리
+      focus_on_upper_body: true    # 상체/얼굴 집중
+    rules:
+      - "얼굴, 상체, 표정에 집중"
+      - "정중앙은 피하고 약간 좌/우로 이동"
+      - "배경은 흐림 처리"
+
+# ==========================================
+# 스타일별 구도 매핑 (새 스타일 시스템 v3.0)
+# ==========================================
+style_mappings:
+
+  # 액션 스타일 (스포츠 광고)
+  action:
+    name: "액션 스타일"
+    primary_composition: "action_shot"
+    secondary_composition: "dynamic_closeup"
+    distribution:
+      primary: 3    # 주 구도 3장
+      secondary: 2  # 보조 구도 2장
+    characteristics:
+      - "에너지와 역동성 강조"
+      - "진행 방향 여백 필수"
+      - "결정적 순간 포착"
+
+  # 인스타그램 스타일 (인플루언서)
+  instagram:
+    name: "인스타그램 스타일"
+    primary_composition: "action_shot"
+    secondary_composition: "environmental"
+    distribution:
+      primary: 3
+      secondary: 2
+    characteristics:
+      - "멋있어 보이는 순간"
+      - "피부톤 좋은 프레임"
+      - "자연스러운 구도"
+
+  # 틱톡 스타일 (바이럴)
+  tiktok:
+    name: "틱톡 스타일"
+    primary_composition: "environmental"
+    secondary_composition: "action_shot"
+    distribution:
+      primary: 3
+      secondary: 2
+    characteristics:
+      - "감성적, 풍경 중심"
+      - "어디서 달리는가 스토리텔링"
+      - "시각적으로 화려한 배경"
+
+  # 유머 스타일 (밈)
+  humor:
+    name: "유머 스타일"
+    primary_composition: "dynamic_closeup"
+    secondary_composition: "action_shot"
+    distribution:
+      primary: 3
+      secondary: 2
+    characteristics:
+      - "표정에 집중"
+      - "힘들어하는 순간"
+      - "밈 포텐셜 있는 프레임"
+
+  # 다큐멘터리 스타일
+  documentary:
+    name: "다큐멘터리 스타일"
+    primary_composition: "environmental"
+    secondary_composition: "action_shot"
+    distribution:
+      primary: 3
+      secondary: 2
+    characteristics:
+      - "자연스러운 구도"
+      - "있는 그대로의 순간"
+      - "인간적인 모먼트"
+
+# ==========================================
+# 종횡비 정의
+# ==========================================
+aspect_ratios:
+  instagram_portrait:
+    ratio: [4, 5]
+    name: "인스타그램 세로"
+  instagram_square:
+    ratio: [1, 1]
+    name: "인스타그램 정사각형"
+  tiktok:
+    ratio: [9, 16]
+    name: "틱톡/릴스 세로"
+  youtube:
+    ratio: [16, 9]
+    name: "유튜브 가로"
+  cinematic:
+    ratio: [21, 9]
+    name: "시네마틱 와이드"
+
+# ==========================================
+# 금지 사항 (자동 검증용)
+# ==========================================
+forbidden_rules:
+  - name: "정중앙 배치 금지"
+    check: "runner_center_threshold"
+    threshold: 0.05  # 중앙에서 5% 이상 벗어나야 함
+
+  - name: "진행 방향 여백 필수"
+    check: "leading_space_minimum"
+    threshold: 0.40  # 최소 40% 여백
+
+  - name: "머리 위 여백 필수"
+    check: "headroom_minimum"
+    threshold: 0.05  # 최소 5% 여백
+
+  - name: "러너 최소 크기"
+    check: "runner_size_minimum"
+    threshold: 0.10  # 환경샷 외에는 10% 이상
+
+  - name: "러너 전신 잘림 금지"
+    check: "runner_fullbody"
+    threshold: 0.0   # 잘림 허용 안 함

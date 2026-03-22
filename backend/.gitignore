@@ -1,0 +1,23 @@
+# 환경변수 (API 키 포함 - 절대 공개 금지)
+.env
+
+# Python 가상환경
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# DB 파일
+*.db
+*.sqlite
+
+# 업로드/출력 파일 (용량 큰 영상/사진)
+videos/
+outputs/
+
+# MediaPipe 모델 파일 (용량 큰 바이너리)
+*.task
+
+# IDE
+.vscode/
+.idea/
