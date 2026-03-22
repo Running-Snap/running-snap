@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+**/.DS_Store
+(2).DS_Store
+
+# 압축 백업
+*.zip
+
+# Claude
+.claude/
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/venv/
+
+# 환경변수 (절대 업로드 금지)
+**/.env
+
+# 대용량 바이너리 모델
+**/*.task
+
+# DB
+**/*.db
+**/*.sqlite
+
+# 영상 파일
+**/*.mp4
+**/*.mov
+**/*.MOV
+
+# 업로드/출력 디렉토리
+**/videos/
+**/outputs/
+**/temp/

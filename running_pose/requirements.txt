@@ -1,0 +1,8 @@
+numpy>=1.24
+pandas>=2.0
+
+opencv-python>=4.8
+
+mediapipe>=0.10.9
+
+google-generativeai>=0.4.1
