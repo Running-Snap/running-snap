@@ -53,7 +53,6 @@ def run_shortform_task(job_id: int, video_paths: list, style: str, duration_sec:
         if VIDEO_EDITOR_AVAILABLE and primary_path and os.path.exists(primary_path):
             from core.config import QWEN_API_KEY
             print(f"[SHORTFORM] AI 처리 시작 - job_id={job_id}, style={style}, duration={duration_sec}s")
-            print(f"[SHORTFORM] QWEN_API_KEY 앞 10자: {QWEN_API_KEY[:10] if QWEN_API_KEY else '없음'}")
             try:
                 from src.api import VideoEditorAPI
                 with VIDEO_EDITOR_LOCK:

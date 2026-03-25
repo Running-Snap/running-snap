@@ -35,6 +35,12 @@ QWEN_API_KEY      = os.getenv("QWEN_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 VIDEO_EDITOR_LOCK = threading.Lock()
 
+# ── AWS S3 ───────────────────────────────────────────────────
+AWS_ACCESS_KEY_ID     = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+AWS_BUCKET_NAME       = os.getenv("AWS_BUCKET_NAME", "")
+AWS_REGION            = os.getenv("AWS_REGION", "ap-northeast-2")
+
 # ── JWT ──────────────────────────────────────────────────────
 SECRET_KEY                  = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
 ALGORITHM                   = "HS256"
