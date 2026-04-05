@@ -1,0 +1,9 @@
+opencv-python>=4.8
+numpy>=1.24
+ultralytics>=8.0.0
+easyocr>=1.7.0
+# torch는 ultralytics/easyocr 설치 시 함께 설치되는 경우가 많습니다.
+# 환경에 따라 누락되면 아래를 활성화하세요.
+# torch
+# optional
+# paddleocr>=2.7.0

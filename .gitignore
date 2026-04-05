@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+appearance_report_output/
+*.mp4
+*.avi
+*.mkv
