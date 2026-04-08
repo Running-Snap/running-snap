@@ -1,0 +1,193 @@
+{
+  "version": "1.0",
+  "template_id": "record_cert_v1",
+  "source_video_id": "manual_cert",
+  "exported_at": "2026-03-05T00:00:00",
+
+  "_comment": "기록 인증 카운터 템플릿 — 8~10초 소스 최적화. 카운터가 메인",
+
+  "meta": {
+    "aspect_ratio": "9:16",
+    "target_duration_seconds": 8.4,
+    "color_grade": "cool",
+    "vibe_tags": ["record", "certification", "running", "cool"]
+  },
+
+  "timeline": {
+    "total_duration_seconds": 8.4,
+    "narrative_flow": "intro → buildup → peak_slowmo → stats_reveal(카운터 메인)",
+    "segments": [
+      {
+        "id": "seg_0",
+        "type": "intro",
+        "start_ratio": 0.0,
+        "end_ratio": 0.25,
+        "start_seconds": 0.0,
+        "end_seconds": 2.1,
+        "shot_type": "wide",
+        "speed": 1.0,
+        "description": "오프닝 와이드샷"
+      },
+      {
+        "id": "seg_1",
+        "type": "buildup",
+        "start_ratio": 0.25,
+        "end_ratio": 0.5,
+        "start_seconds": 2.1,
+        "end_seconds": 4.2,
+        "shot_type": "medium",
+        "speed": 1.0,
+        "description": "빌드업"
+      },
+      {
+        "id": "seg_2",
+        "type": "peak",
+        "start_ratio": 0.5,
+        "end_ratio": 0.6,
+        "start_seconds": 4.2,
+        "end_seconds": 5.04,
+        "shot_type": "close_up",
+        "speed": 0.5,
+        "description": "피크 슬로모션"
+      },
+      {
+        "id": "seg_3",
+        "type": "stats_reveal",
+        "start_ratio": 0.6,
+        "end_ratio": 1.0,
+        "start_seconds": 5.04,
+        "end_seconds": 8.4,
+        "shot_type": "medium",
+        "speed": 1.0,
+        "description": "기록 공개 — 카운터 메인"
+      }
+    ],
+    "cuts": [
+      {"position_ratio": 0.25, "type": "hard_cut"},
+      {"position_ratio": 0.5,  "type": "flash"},
+      {"position_ratio": 0.6,  "type": "hard_cut"}
+    ]
+  },
+
+  "speed_changes": [
+    {
+      "start_ratio": 0.5,
+      "end_ratio": 0.6,
+      "speed": 0.5,
+      "description": "피크 슬로모션"
+    }
+  ],
+
+  "effects": [
+    {
+      "type": "zoom_in",
+      "start_ratio": 0.0,
+      "end_ratio": 0.25,
+      "intensity": 0.12
+    },
+    {
+      "type": "zoom_in",
+      "start_ratio": 0.5,
+      "end_ratio": 0.6,
+      "intensity": 0.08
+    }
+  ],
+
+  "overlays": [
+    {
+      "id": "overlay_title",
+      "type": "text",
+      "content": "TODAY'S\nRUN",
+      "content_template": "TODAY'S\nRUN",
+      "position_pct": {"x": 50, "y": 13},
+      "start_ratio": 0.0,
+      "end_ratio": 0.25,
+      "style": {
+        "font_weight": 700,
+        "font_size_ratio": 0.075,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "overlay_counter_km",
+      "type": "counter",
+      "content": "5.2 km",
+      "content_template": "{distance_km} km",
+      "position_pct": {"x": 50, "y": 42},
+      "start_ratio": 0.6,
+      "end_ratio": 1.0,
+      "counter_config": {
+        "start_value": 0.0,
+        "end_value": 5.2,
+        "unit": "km",
+        "decimal_places": 1,
+        "count_up": true,
+        "easing": "ease_out"
+      },
+      "style": {
+        "font_weight": 900,
+        "font_size_ratio": 0.15,
+        "color": "#FFFFFF",
+        "opacity": 1.0
+      }
+    },
+    {
+      "id": "overlay_pace_label",
+      "type": "text",
+      "content": "PACE",
+      "content_template": "PACE",
+      "position_pct": {"x": 50, "y": 60},
+      "start_ratio": 0.6,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.035,
+        "color": "#AADDFF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "overlay_pace",
+      "type": "text",
+      "content": "5'47\"/km",
+      "content_template": "{pace}",
+      "position_pct": {"x": 50, "y": 67},
+      "start_ratio": 0.6,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.055,
+        "color": "#FFFFFF",
+        "opacity": 0.9
+      }
+    },
+    {
+      "id": "overlay_date",
+      "type": "text",
+      "content": "2026.03.05",
+      "content_template": "{date}",
+      "position_pct": {"x": 50, "y": 88},
+      "start_ratio": 0.6,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#99BBDD",
+        "opacity": 0.75
+      }
+    }
+  ],
+
+  "color_grade": {
+    "overall_tone": "cool",
+    "has_filter": true,
+    "filter_style": "film",
+    "adjustment_params": {
+      "brightness": -5,
+      "contrast": 15,
+      "saturation": -10,
+      "temperature": -15
+    }
+  }
+}

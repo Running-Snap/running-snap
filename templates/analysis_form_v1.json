@@ -1,0 +1,292 @@
+{
+  "version": "1.0",
+  "template_id": "analysis_form_v1",
+  "source_video_id": "manual_form_analysis",
+  "exported_at": "2026-03-05T00:00:00",
+
+  "_comment": "러닝 자세 해설 + 분석 카드 — 폼 코멘트 자막 순차 등장 후 데이터 카드 공개",
+
+  "meta": {
+    "aspect_ratio": "9:16",
+    "target_duration_seconds": 10.0,
+    "color_grade": "dark",
+    "vibe_tags": ["analysis", "form", "coaching", "dark"]
+  },
+
+  "timeline": {
+    "total_duration_seconds": 10.0,
+    "narrative_flow": "intro → 폼 해설 자막 4컷 → peak_slowmo → 데이터 카드",
+    "segments": [
+      {
+        "id": "seg_0",
+        "type": "intro",
+        "start_ratio": 0.0,
+        "end_ratio": 0.15,
+        "start_seconds": 0.0,
+        "end_seconds": 1.5,
+        "shot_type": "wide",
+        "speed": 1.0
+      },
+      {
+        "id": "seg_1",
+        "type": "buildup",
+        "start_ratio": 0.15,
+        "end_ratio": 0.55,
+        "start_seconds": 1.5,
+        "end_seconds": 5.5,
+        "shot_type": "medium",
+        "speed": 1.0
+      },
+      {
+        "id": "seg_2",
+        "type": "peak",
+        "start_ratio": 0.55,
+        "end_ratio": 0.65,
+        "start_seconds": 5.5,
+        "end_seconds": 6.5,
+        "shot_type": "close_up",
+        "speed": 0.5
+      },
+      {
+        "id": "seg_3",
+        "type": "stats_reveal",
+        "start_ratio": 0.65,
+        "end_ratio": 1.0,
+        "start_seconds": 6.5,
+        "end_seconds": 10.0,
+        "shot_type": "medium",
+        "speed": 1.0
+      }
+    ],
+    "cuts": [
+      {"position_ratio": 0.15, "type": "hard_cut"},
+      {"position_ratio": 0.55, "type": "flash"},
+      {"position_ratio": 0.65, "type": "hard_cut"}
+    ]
+  },
+
+  "speed_changes": [
+    {"start_ratio": 0.55, "end_ratio": 0.65, "speed": 0.5}
+  ],
+
+  "effects": [
+    {"type": "zoom_in", "start_ratio": 0.0,  "end_ratio": 0.15, "intensity": 0.12},
+    {"type": "zoom_in", "start_ratio": 0.55, "end_ratio": 0.65, "intensity": 0.08}
+  ],
+
+  "overlays": [
+
+    {
+      "id": "title",
+      "type": "text",
+      "content": "RUNNING\nFORM CHECK",
+      "position_pct": {"x": 50, "y": 12},
+      "start_ratio": 0.0,
+      "end_ratio": 0.15,
+      "style": {
+        "font_weight": 700,
+        "font_size_ratio": 0.065,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "form_0",
+      "type": "text",
+      "content": "팔 스윙 안정적 ✓",
+      "position_pct": {"x": 50, "y": 83},
+      "start_ratio": 0.15,
+      "end_ratio": 0.27,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.046,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "form_1",
+      "type": "text",
+      "content": "발 착지 자세 양호 ✓",
+      "position_pct": {"x": 50, "y": 83},
+      "start_ratio": 0.27,
+      "end_ratio": 0.39,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.046,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "form_2",
+      "type": "text",
+      "content": "상체 기울기 적절 ✓",
+      "position_pct": {"x": 50, "y": 83},
+      "start_ratio": 0.39,
+      "end_ratio": 0.50,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.046,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "form_3",
+      "type": "text",
+      "content": "케이던스 유지 중 ✓",
+      "position_pct": {"x": 50, "y": 83},
+      "start_ratio": 0.50,
+      "end_ratio": 0.55,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.046,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "peak_txt",
+      "type": "text",
+      "content": "NICE FORM",
+      "position_pct": {"x": 50, "y": 50},
+      "start_ratio": 0.55,
+      "end_ratio": 0.65,
+      "style": {
+        "font_weight": 900,
+        "font_size_ratio": 0.08,
+        "color": "#FFFFFF",
+        "opacity": 0.9
+      }
+    },
+
+    {
+      "id": "ov_dist_label",
+      "type": "text",
+      "content": "DISTANCE",
+      "position_pct": {"x": 50, "y": 34},
+      "start_ratio": 0.65,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#80C8FF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "ov_dist_counter",
+      "type": "counter",
+      "content": "5.2 km",
+      "position_pct": {"x": 50, "y": 42},
+      "start_ratio": 0.65,
+      "end_ratio": 1.0,
+      "counter_config": {
+        "start_value": 0.0,
+        "end_value": 5.2,
+        "unit": "km",
+        "decimal_places": 1,
+        "count_up": true,
+        "easing": "ease_out"
+      },
+      "style": {
+        "font_weight": 900,
+        "font_size_ratio": 0.14,
+        "color": "#FFFFFF",
+        "opacity": 1.0
+      }
+    },
+
+    {
+      "id": "ov_time_label",
+      "type": "text",
+      "content": "TIME",
+      "position_pct": {"x": 50, "y": 59},
+      "start_ratio": 0.71,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#80C8FF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "ov_time_val",
+      "type": "text",
+      "content": "30'04\"",
+      "position_pct": {"x": 50, "y": 65},
+      "start_ratio": 0.71,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.065,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "ov_pace_label",
+      "type": "text",
+      "content": "PACE",
+      "position_pct": {"x": 50, "y": 74},
+      "start_ratio": 0.77,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#80C8FF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "ov_pace_val",
+      "type": "text",
+      "content": "5'47\"/km",
+      "position_pct": {"x": 50, "y": 80},
+      "start_ratio": 0.77,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.065,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "ov_date",
+      "type": "text",
+      "content": "2026.03.05",
+      "position_pct": {"x": 50, "y": 90},
+      "start_ratio": 0.83,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.030,
+        "color": "#6699BB",
+        "opacity": 0.75
+      }
+    }
+
+  ],
+
+  "color_grade": {
+    "overall_tone": "dark",
+    "has_filter": true,
+    "filter_style": "film",
+    "adjustment_params": {
+      "brightness": -10,
+      "contrast": 20,
+      "saturation": -20,
+      "temperature": -10
+    }
+  }
+}

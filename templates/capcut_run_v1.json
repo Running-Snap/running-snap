@@ -1,0 +1,240 @@
+{
+  "version": "1.0",
+  "template_id": "capcut_run_v1",
+  "source_video_id": "experiment_manual",
+  "exported_at": "2026-03-01T00:00:00",
+
+  "_comment": "캡컷 스타일 러닝 숏폼 템플릿 (실험용) — searchingmodule이 YouTube 분석 후 생성하는 포맷을 수동으로 재현",
+
+  "meta": {
+    "aspect_ratio": "9:16",
+    "target_duration_seconds": 15.0,
+    "color_grade": "moody",
+    "vibe_tags": ["energetic", "running", "motivational", "cinematic"]
+  },
+
+  "timeline": {
+    "total_duration_seconds": 15.0,
+    "narrative_flow": "action_open → buildup → peak_slowmo → stats_reveal → outro",
+    "segments": [
+      {
+        "id": "seg_0",
+        "type": "intro",
+        "start_ratio": 0.0,
+        "end_ratio": 0.2,
+        "start_seconds": 0.0,
+        "end_seconds": 3.0,
+        "shot_type": "wide",
+        "speed": 1.0,
+        "description": "오프닝 — 달리는 모습 전체 샷"
+      },
+      {
+        "id": "seg_1",
+        "type": "buildup",
+        "start_ratio": 0.2,
+        "end_ratio": 0.47,
+        "start_seconds": 3.0,
+        "end_seconds": 7.0,
+        "shot_type": "medium",
+        "speed": 1.0,
+        "description": "빌드업 — 몸통/다리 중간 샷"
+      },
+      {
+        "id": "seg_2",
+        "type": "peak",
+        "start_ratio": 0.47,
+        "end_ratio": 0.73,
+        "start_seconds": 7.0,
+        "end_seconds": 11.0,
+        "shot_type": "close_up",
+        "speed": 0.35,
+        "description": "피크 슬로모션 — 발/디테일 클로즈업"
+      },
+      {
+        "id": "seg_3",
+        "type": "stats_reveal",
+        "start_ratio": 0.73,
+        "end_ratio": 0.9,
+        "start_seconds": 11.0,
+        "end_seconds": 13.5,
+        "shot_type": "medium",
+        "speed": 1.0,
+        "description": "스탯 공개 — 거리/페이스 오버레이 등장"
+      },
+      {
+        "id": "seg_4",
+        "type": "outro",
+        "start_ratio": 0.9,
+        "end_ratio": 1.0,
+        "start_seconds": 13.5,
+        "end_seconds": 15.0,
+        "shot_type": "wide",
+        "speed": 1.0,
+        "description": "아웃트로 — 마무리 와이드샷"
+      }
+    ],
+    "cuts": [
+      {"position_ratio": 0.2, "position_seconds": 3.0, "type": "hard_cut"},
+      {"position_ratio": 0.47, "position_seconds": 7.0, "type": "flash"},
+      {"position_ratio": 0.73, "position_seconds": 11.0, "type": "hard_cut"},
+      {"position_ratio": 0.9, "position_seconds": 13.5, "type": "dissolve"}
+    ]
+  },
+
+  "speed_changes": [
+    {
+      "start_ratio": 0.47,
+      "end_ratio": 0.73,
+      "start_seconds": 7.0,
+      "end_seconds": 11.0,
+      "speed": 0.35,
+      "description": "피크 슬로모션 (35% 속도)"
+    }
+  ],
+
+  "effects": [
+    {
+      "type": "zoom_in",
+      "start_ratio": 0.0,
+      "end_ratio": 0.2,
+      "start_seconds": 0.0,
+      "end_seconds": 3.0,
+      "intensity": 0.15
+    },
+    {
+      "type": "zoom_in",
+      "start_ratio": 0.47,
+      "end_ratio": 0.73,
+      "start_seconds": 7.0,
+      "end_seconds": 11.0,
+      "intensity": 0.1
+    },
+    {
+      "type": "vignette",
+      "start_ratio": 0.0,
+      "end_ratio": 1.0,
+      "start_seconds": 0.0,
+      "end_seconds": 15.0,
+      "intensity": 0.35
+    }
+  ],
+
+  "overlays": [
+    {
+      "id": "overlay_0",
+      "type": "text",
+      "content": "KEEP\nRUNNING",
+      "content_template": "KEEP\nRUNNING",
+      "position": "top_center",
+      "position_pct": {"x": 50, "y": 12},
+      "start_ratio": 0.0,
+      "end_ratio": 0.2,
+      "start_seconds": 0.0,
+      "end_seconds": 3.0,
+      "animation_in": "fade_in",
+      "animation_out": "fade_out",
+      "style": {
+        "font_family": "Inter Bold",
+        "font_weight": 700,
+        "font_size_ratio": 0.08,
+        "color": "#FFFFFF",
+        "opacity": 0.95,
+        "has_shadow": true,
+        "letter_spacing": 6
+      }
+    },
+    {
+      "id": "overlay_2",
+      "type": "counter",
+      "content": "5.2 km",
+      "content_template": "{distance_km} km",
+      "position": "center",
+      "position_pct": {"x": 50, "y": 48},
+      "start_ratio": 0.73,
+      "end_ratio": 1.0,
+      "start_seconds": 11.0,
+      "end_seconds": 15.0,
+      "animation_in": "slide_up",
+      "animation_out": "fade_out",
+      "counter_config": {
+        "start_value": 0.0,
+        "end_value": 5.2,
+        "unit": "km",
+        "decimal_places": 1,
+        "count_up": true,
+        "easing": "ease_out"
+      },
+      "style": {
+        "font_size_ratio": 0.12,
+        "color": "#FFFFFF",
+        "opacity": 1.0,
+        "has_shadow": true
+      }
+    },
+    {
+      "id": "overlay_3",
+      "type": "text",
+      "content": "5'47\"/km",
+      "content_template": "{pace}",
+      "position": "bottom_center",
+      "position_pct": {"x": 50, "y": 62},
+      "start_ratio": 0.73,
+      "end_ratio": 1.0,
+      "start_seconds": 11.0,
+      "end_seconds": 15.0,
+      "animation_in": "fade_in",
+      "animation_out": "fade_out",
+      "style": {
+        "font_size_ratio": 0.055,
+        "color": "#CCCCCC",
+        "opacity": 0.9,
+        "has_shadow": true
+      }
+    },
+    {
+      "id": "overlay_4",
+      "type": "text",
+      "content": "2026.03.01",
+      "content_template": "{date}",
+      "position": "bottom_center",
+      "position_pct": {"x": 50, "y": 88},
+      "start_ratio": 0.73,
+      "end_ratio": 1.0,
+      "start_seconds": 11.0,
+      "end_seconds": 15.0,
+      "animation_in": "fade_in",
+      "animation_out": "fade_out",
+      "style": {
+        "font_size_ratio": 0.035,
+        "color": "#AAAAAA",
+        "opacity": 0.8,
+        "has_shadow": false
+      }
+    }
+  ],
+
+  "color_grade": {
+    "overall_tone": "moody",
+    "lut_preset": "moody_film",
+    "adjustment_params": {
+      "brightness": -5,
+      "contrast": 20,
+      "saturation": -15,
+      "shadows": -5
+    }
+  },
+
+  "audio": {
+    "music_genre": "hip-hop",
+    "music_energy": "high",
+    "beat_sync_recommended": true,
+    "beat_timestamps": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0]
+  },
+
+  "matching_criteria": {
+    "min_source_duration": 10.0,
+    "recommended_source_duration": 20.0,
+    "motion_level": "high",
+    "sport_type": "running"
+  }
+}

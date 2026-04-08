@@ -1,0 +1,189 @@
+{
+  "version": "1.0",
+  "template_id": "form_sub_v1",
+  "source_video_id": "manual_form_sub",
+  "exported_at": "2026-03-05T00:00:00",
+
+  "_comment": "러닝 폼 해설 자막만 — 타이틀/카운터 없음, 대사 8컷 순차 배치",
+
+  "meta": {
+    "aspect_ratio": "9:16",
+    "target_duration_seconds": 10.0,
+    "color_grade": "dark",
+    "vibe_tags": ["form", "coaching", "subtitle", "dark"]
+  },
+
+  "timeline": {
+    "total_duration_seconds": 10.0,
+    "narrative_flow": "폼 해설 자막 4컷 → peak_slowmo → 자막 4컷",
+    "segments": [
+      {
+        "id": "seg_0",
+        "type": "intro",
+        "start_ratio": 0.0,
+        "end_ratio": 0.15,
+        "start_seconds": 0.0,
+        "end_seconds": 1.5,
+        "shot_type": "wide",
+        "speed": 1.0
+      },
+      {
+        "id": "seg_1",
+        "type": "buildup",
+        "start_ratio": 0.15,
+        "end_ratio": 0.50,
+        "start_seconds": 1.5,
+        "end_seconds": 5.0,
+        "shot_type": "medium",
+        "speed": 1.0
+      },
+      {
+        "id": "seg_2",
+        "type": "peak",
+        "start_ratio": 0.50,
+        "end_ratio": 0.58,
+        "start_seconds": 5.0,
+        "end_seconds": 5.8,
+        "shot_type": "close_up",
+        "speed": 0.5
+      },
+      {
+        "id": "seg_3",
+        "type": "outro",
+        "start_ratio": 0.58,
+        "end_ratio": 1.0,
+        "start_seconds": 5.8,
+        "end_seconds": 10.0,
+        "shot_type": "medium",
+        "speed": 1.0
+      }
+    ],
+    "cuts": [
+      {"position_ratio": 0.15, "type": "hard_cut"},
+      {"position_ratio": 0.50, "type": "flash"},
+      {"position_ratio": 0.58, "type": "hard_cut"}
+    ]
+  },
+
+  "speed_changes": [
+    {"start_ratio": 0.50, "end_ratio": 0.58, "speed": 0.5}
+  ],
+
+  "effects": [
+    {"type": "zoom_in", "start_ratio": 0.0,  "end_ratio": 0.15, "intensity": 0.1},
+    {"type": "zoom_in", "start_ratio": 0.50, "end_ratio": 0.58, "intensity": 0.08}
+  ],
+
+  "overlays": [
+    {
+      "id": "sub_0",
+      "type": "text",
+      "content": "지금 폼은 상체가 곧게 잘 서 있고",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.0,
+      "end_ratio": 0.13,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "sub_1",
+      "type": "text",
+      "content": "보폭과 팔치기가 자연스럽게 연결돼서",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.13,
+      "end_ratio": 0.26,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "sub_2",
+      "type": "text",
+      "content": "전체적인 밸런스가 아주 좋습니다.",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.26,
+      "end_ratio": 0.38,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "sub_3",
+      "type": "text",
+      "content": "다만 착지할 때 발이 몸보다 조금 앞에서 닿는 경향이 있어서,",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.38,
+      "end_ratio": 0.50,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "sub_4",
+      "type": "text",
+      "content": "발을 몸 중심 바로 아래에 두도록 의식하면",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.58,
+      "end_ratio": 0.70,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "sub_5",
+      "type": "text",
+      "content": "추진력이 더 살아나고",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.70,
+      "end_ratio": 0.82,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+    {
+      "id": "sub_6",
+      "type": "text",
+      "content": "부상 위험도 줄일 수 있겠습니다.",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.82,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.044,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    }
+  ],
+
+  "color_grade": {
+    "overall_tone": "dark",
+    "has_filter": true,
+    "filter_style": "film",
+    "adjustment_params": {
+      "brightness": -10,
+      "contrast": 20,
+      "saturation": -20,
+      "temperature": -10
+    }
+  }
+}

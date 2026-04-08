@@ -1,0 +1,247 @@
+{
+  "version": "1.0",
+  "template_id": "analysis_sub_v1",
+  "source_video_id": "manual_analysis_sub",
+  "exported_at": "2026-03-05T00:00:00",
+
+  "_comment": "분석 카드 + 자막 트랙 조합 — 인트로/빌드업엔 자막, 스탯 구간엔 데이터 카드",
+
+  "meta": {
+    "aspect_ratio": "9:16",
+    "target_duration_seconds": 8.4,
+    "color_grade": "dark",
+    "vibe_tags": ["analysis", "record", "subtitle", "dark"]
+  },
+
+  "timeline": {
+    "total_duration_seconds": 8.4,
+    "narrative_flow": "intro(자막1) → buildup(자막2) → peak_slowmo → analysis_card",
+    "segments": [
+      {
+        "id": "seg_0",
+        "type": "intro",
+        "start_ratio": 0.0,
+        "end_ratio": 0.2,
+        "start_seconds": 0.0,
+        "end_seconds": 1.68,
+        "shot_type": "wide",
+        "speed": 1.0
+      },
+      {
+        "id": "seg_1",
+        "type": "buildup",
+        "start_ratio": 0.2,
+        "end_ratio": 0.5,
+        "start_seconds": 1.68,
+        "end_seconds": 4.2,
+        "shot_type": "medium",
+        "speed": 1.0
+      },
+      {
+        "id": "seg_2",
+        "type": "peak",
+        "start_ratio": 0.5,
+        "end_ratio": 0.6,
+        "start_seconds": 4.2,
+        "end_seconds": 5.04,
+        "shot_type": "close_up",
+        "speed": 0.5
+      },
+      {
+        "id": "seg_3",
+        "type": "stats_reveal",
+        "start_ratio": 0.6,
+        "end_ratio": 1.0,
+        "start_seconds": 5.04,
+        "end_seconds": 8.4,
+        "shot_type": "medium",
+        "speed": 1.0
+      }
+    ],
+    "cuts": [
+      {"position_ratio": 0.2,  "type": "hard_cut"},
+      {"position_ratio": 0.5,  "type": "flash"},
+      {"position_ratio": 0.6,  "type": "hard_cut"}
+    ]
+  },
+
+  "speed_changes": [
+    {"start_ratio": 0.5, "end_ratio": 0.6, "speed": 0.5}
+  ],
+
+  "effects": [
+    {"type": "zoom_in", "start_ratio": 0.0, "end_ratio": 0.2, "intensity": 0.12},
+    {"type": "zoom_in", "start_ratio": 0.5, "end_ratio": 0.6, "intensity": 0.08}
+  ],
+
+  "overlays": [
+
+    {
+      "id": "sub_0",
+      "type": "text",
+      "content": "5AM CLUB",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.0,
+      "end_ratio": 0.2,
+      "style": {
+        "font_weight": 700,
+        "font_size_ratio": 0.048,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "sub_1",
+      "type": "text",
+      "content": "요즘 유행하는 러닝 인증",
+      "position_pct": {"x": 50, "y": 84},
+      "start_ratio": 0.2,
+      "end_ratio": 0.5,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.045,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "sub_2",
+      "type": "text",
+      "content": "KEEP RUNNING",
+      "position_pct": {"x": 50, "y": 50},
+      "start_ratio": 0.5,
+      "end_ratio": 0.6,
+      "style": {
+        "font_weight": 900,
+        "font_size_ratio": 0.072,
+        "color": "#FFFFFF",
+        "opacity": 0.9
+      }
+    },
+
+    {
+      "id": "ov_dist_label",
+      "type": "text",
+      "content": "DISTANCE",
+      "position_pct": {"x": 50, "y": 34},
+      "start_ratio": 0.6,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#80C8FF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "ov_dist_counter",
+      "type": "counter",
+      "content": "5.2 km",
+      "position_pct": {"x": 50, "y": 42},
+      "start_ratio": 0.6,
+      "end_ratio": 1.0,
+      "counter_config": {
+        "start_value": 0.0,
+        "end_value": 5.2,
+        "unit": "km",
+        "decimal_places": 1,
+        "count_up": true,
+        "easing": "ease_out"
+      },
+      "style": {
+        "font_weight": 900,
+        "font_size_ratio": 0.14,
+        "color": "#FFFFFF",
+        "opacity": 1.0
+      }
+    },
+
+    {
+      "id": "ov_time_label",
+      "type": "text",
+      "content": "TIME",
+      "position_pct": {"x": 50, "y": 59},
+      "start_ratio": 0.66,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#80C8FF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "ov_time_val",
+      "type": "text",
+      "content": "30'04\"",
+      "position_pct": {"x": 50, "y": 65},
+      "start_ratio": 0.66,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.065,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "ov_pace_label",
+      "type": "text",
+      "content": "PACE",
+      "position_pct": {"x": 50, "y": 74},
+      "start_ratio": 0.72,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.032,
+        "color": "#80C8FF",
+        "opacity": 0.85
+      }
+    },
+    {
+      "id": "ov_pace_val",
+      "type": "text",
+      "content": "5'47\"/km",
+      "position_pct": {"x": 50, "y": 80},
+      "start_ratio": 0.72,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 400,
+        "font_size_ratio": 0.065,
+        "color": "#FFFFFF",
+        "opacity": 0.95
+      }
+    },
+
+    {
+      "id": "ov_date",
+      "type": "text",
+      "content": "2026.03.05",
+      "position_pct": {"x": 50, "y": 90},
+      "start_ratio": 0.78,
+      "end_ratio": 1.0,
+      "style": {
+        "font_weight": 300,
+        "font_size_ratio": 0.030,
+        "color": "#6699BB",
+        "opacity": 0.75
+      }
+    }
+
+  ],
+
+  "color_grade": {
+    "overall_tone": "dark",
+    "has_filter": true,
+    "filter_style": "film",
+    "adjustment_params": {
+      "brightness": -10,
+      "contrast": 20,
+      "saturation": -20,
+      "temperature": -10
+    }
+  }
+}
