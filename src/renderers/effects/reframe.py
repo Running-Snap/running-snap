@@ -10,6 +10,7 @@ Smart Reframe 모듈
 """
 import numpy as np
 import cv2
+from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from moviepy import VideoFileClip
@@ -66,31 +67,44 @@ class CropRegion:
 
 
 class SubjectTracker:
-    """MediaPipe 기반 피사체 추적기"""
+    """MediaPipe 기반 피사체 추적기 (Tasks API 0.10.x)"""
 
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
+        self.landmarker = None
 
         if not MEDIAPIPE_AVAILABLE:
             self.console.print("[yellow]MediaPipe 미설치 - 중앙 크롭 모드로 폴백[/yellow]")
-            self.face_detection = None
-            self.pose = None
             return
 
-        # MediaPipe 초기화
-        self.mp_face = mp.solutions.face_detection
-        self.mp_pose = mp.solutions.pose
+        # Tasks API: PoseLandmarker (IMAGE 모드)
+        model_path = Path("models/pose_landmarker_full.task")
+        if not model_path.exists():
+            self.console.print(
+                f"[yellow]모델 파일 없음: {model_path} - 중앙 크롭 모드로 폴백[/yellow]"
+            )
+            return
 
-        self.face_detection = self.mp_face.FaceDetection(
-            model_selection=1,  # 0: 2m 이내, 1: 5m 이내
-            min_detection_confidence=0.5
-        )
-        self.pose = self.mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
-        )
+        try:
+            from mediapipe.tasks.python import BaseOptions
+            from mediapipe.tasks.python.vision import (
+                PoseLandmarker, PoseLandmarkerOptions, RunningMode,
+            )
+
+            options = PoseLandmarkerOptions(
+                base_options=BaseOptions(model_asset_path=str(model_path)),
+                running_mode=RunningMode.IMAGE,
+                num_poses=1,
+                min_pose_detection_confidence=0.5,
+                min_pose_presence_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
+            self.landmarker = PoseLandmarker.create_from_options(options)
+        except Exception as e:
+            self.console.print(
+                f"[yellow]MediaPipe 초기화 실패: {e} - 중앙 크롭 모드로 폴백[/yellow]"
+            )
+            self.landmarker = None
 
     def extract_positions(
         self,
@@ -165,66 +179,66 @@ class SubjectTracker:
         return positions
 
     def _detect_subject(self, frame: np.ndarray, time: float) -> SubjectPosition:
-        """단일 프레임에서 피사체 위치 검출"""
-        h, w = frame.shape[:2]
+        """단일 프레임에서 피사체 위치 검출 (Tasks API 0.10.x)"""
 
-        if not MEDIAPIPE_AVAILABLE or self.face_detection is None:
-            # MediaPipe 없으면 중앙 반환
+        if not MEDIAPIPE_AVAILABLE or self.landmarker is None:
             return SubjectPosition(
                 time=time, x=0.5, y=0.5,
                 confidence=0.0, source="fallback"
             )
 
-        # BGR → RGB
+        # BGR → RGB → mp.Image
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        try:
+            mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            result = self.landmarker.detect(mp_img)
+        except Exception:
+            return SubjectPosition(
+                time=time, x=0.5, y=0.5,
+                confidence=0.0, source="fallback"
+            )
 
-        # 1. 얼굴 검출 시도
-        face_results = self.face_detection.process(rgb)
-        if face_results.detections:
-            detection = face_results.detections[0]  # 첫 번째 얼굴
-            bbox = detection.location_data.relative_bounding_box
+        if not result.pose_landmarks:
+            return SubjectPosition(
+                time=time, x=0.5, y=0.5,
+                confidence=0.0, source="fallback"
+            )
 
-            # 얼굴 중심 (머리 위 공간 확보를 위해 약간 위로)
-            face_cx = bbox.xmin + bbox.width / 2
-            face_cy = bbox.ymin + bbox.height * 0.3  # 얼굴 상단 쪽으로
+        landmarks = result.pose_landmarks[0]
 
+        # 1. 코(index 0)로 얼굴 위치 추정 — 별도 face_detection 모델 불필요
+        nose = landmarks[0]
+        if nose.visibility > 0.5:
+            face_cx = nose.x
+            face_cy = nose.y - 0.03  # 머리 위 공간 확보
             return SubjectPosition(
                 time=time,
                 x=float(np.clip(face_cx, 0, 1)),
                 y=float(np.clip(face_cy, 0, 1)),
-                confidence=float(detection.score[0]),
+                confidence=float(nose.visibility),
                 source="face"
             )
 
-        # 2. 얼굴 없으면 포즈 검출
-        pose_results = self.pose.process(rgb)
-        if pose_results.pose_landmarks:
-            landmarks = pose_results.pose_landmarks.landmark
+        # 2. 주요 랜드마크(어깨·엉덩이)로 몸통 중심 계산
+        # 0: 코, 11: 왼쪽 어깨, 12: 오른쪽 어깨, 23: 왼쪽 엉덩이, 24: 오른쪽 엉덩이
+        key_points = [0, 11, 12, 23, 24]
+        valid_points = []
+        for idx in key_points:
+            lm = landmarks[idx]
+            if lm.visibility > 0.5:
+                valid_points.append((lm.x, lm.y))
 
-            # 주요 랜드마크로 몸통 중심 계산
-            # 0: 코, 11: 왼쪽 어깨, 12: 오른쪽 어깨, 23: 왼쪽 엉덩이, 24: 오른쪽 엉덩이
-            key_points = [0, 11, 12, 23, 24]
-            valid_points = []
-
-            for idx in key_points:
-                lm = landmarks[idx]
-                if lm.visibility > 0.5:
-                    valid_points.append((lm.x, lm.y))
-
-            if valid_points:
-                avg_x = np.mean([p[0] for p in valid_points])
-                avg_y = np.mean([p[1] for p in valid_points])
-
-                # 머리 쪽으로 약간 오프셋
-                avg_y = avg_y - 0.1
-
-                return SubjectPosition(
-                    time=time,
-                    x=float(np.clip(avg_x, 0, 1)),
-                    y=float(np.clip(avg_y, 0, 1)),
-                    confidence=0.7,
-                    source="pose"
-                )
+        if valid_points:
+            avg_x = np.mean([p[0] for p in valid_points])
+            avg_y = np.mean([p[1] for p in valid_points])
+            avg_y = avg_y - 0.1  # 머리 쪽으로 약간 오프셋
+            return SubjectPosition(
+                time=time,
+                x=float(np.clip(avg_x, 0, 1)),
+                y=float(np.clip(avg_y, 0, 1)),
+                confidence=0.7,
+                source="pose"
+            )
 
         # 3. 아무것도 없으면 중앙
         return SubjectPosition(
@@ -270,11 +284,9 @@ class SubjectTracker:
 
     def close(self):
         """리소스 해제"""
-        if MEDIAPIPE_AVAILABLE:
-            if self.face_detection:
-                self.face_detection.close()
-            if self.pose:
-                self.pose.close()
+        if self.landmarker is not None:
+            self.landmarker.close()
+            self.landmarker = None
 
 
 class SmartReframer:
