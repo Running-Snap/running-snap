@@ -1,20 +1,26 @@
+import json
 import os
 from datetime import datetime
 from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User, Video
+from core.database import get_db
+from core.models import User, Video, AnalysisJob, BestCutJob, ShortformJob
 from core.config import (
     SECRET_KEY, ALGORITHM,
     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BUCKET_NAME, AWS_REGION,
+    UPLOAD_FOLDER,
 )
 from core.security import get_current_user
+from core.utils import run_in_thread
+from services.analysis import run_analysis_task
+from services.bestcut import run_bestcut_task
+from services.shortform import run_shortform_task
 
 router = APIRouter(tags=["videos"])
 
@@ -29,6 +35,7 @@ def _s3_client():
 
 @router.post("/upload-video/")
 async def upload_video(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -55,13 +62,48 @@ async def upload_video(
     db.refresh(db_video)
 
     video_url = f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{s3_key}"
+    video_path = video_url if AWS_BUCKET_NAME else os.path.abspath(os.path.join(UPLOAD_FOLDER, filename))
+
+    # 자세분석 job 자동 생성
+    analysis_job = AnalysisJob(user_id=current_user.id, video_id=db_video.id, status="pending")
+    db.add(analysis_job)
+    db.commit()
+    db.refresh(analysis_job)
+    background_tasks.add_task(run_in_thread, run_analysis_task, analysis_job.id, video_path)
+
+    # 베스트컷 job 자동 생성
+    bestcut_job = BestCutJob(
+        user_id=current_user.id, video_id=db_video.id,
+        video_ids_json=json.dumps([db_video.id]),
+        photo_count=5, status="pending",
+    )
+    db.add(bestcut_job)
+    db.commit()
+    db.refresh(bestcut_job)
+    background_tasks.add_task(run_in_thread, run_bestcut_task, bestcut_job.id, [video_path], 5)
+
+    # 숏폼 job 자동 생성
+    shortform_job = ShortformJob(
+        user_id=current_user.id, video_id=db_video.id,
+        video_ids_json=json.dumps([db_video.id]),
+        style="action", duration_sec=60, status="pending",
+    )
+    db.add(shortform_job)
+    db.commit()
+    db.refresh(shortform_job)
+    background_tasks.add_task(run_in_thread, run_shortform_task, shortform_job.id, [video_path], "action", 60)
+
+    print(f"[UPLOAD] video_id={db_video.id} → analysis={analysis_job.id}, bestcut={bestcut_job.id}, shortform={shortform_job.id} 자동 시작")
 
     return {
-        "success":   True,
-        "video_id":  db_video.id,
-        "filename":  filename,
-        "user_id":   current_user.id,
-        "video_url": video_url,
+        "success":          True,
+        "video_id":         db_video.id,
+        "filename":         filename,
+        "user_id":          current_user.id,
+        "video_url":        video_url,
+        "analysis_job_id":  analysis_job.id,
+        "bestcut_job_id":   bestcut_job.id,
+        "shortform_job_id": shortform_job.id,
     }
 
 

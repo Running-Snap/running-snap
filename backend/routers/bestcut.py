@@ -5,12 +5,12 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User, Video, BestCutJob
-from schemas import BestCutJobCreate, BestCutJobResponse
+from core.database import get_db
+from core.models import User, Video, BestCutJob
+from core.schemas import BestCutJobCreate, BestCutJobResponse
 from core.security import get_current_user
 from core.utils import run_in_thread
-from core.config import UPLOAD_FOLDER
+from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.bestcut import run_bestcut_task
 
 router = APIRouter(prefix="/bestcut-jobs", tags=["bestcut"])
@@ -44,8 +44,20 @@ async def create_bestcut_job(
     db.commit()
     db.refresh(job)
 
-    video_paths = [os.path.abspath(os.path.join(UPLOAD_FOLDER, v.filename)) for v in videos]
-    background_tasks.add_task(run_in_thread, run_bestcut_task, job.id, video_paths, body.photo_count)
+    if AWS_BUCKET_NAME:
+        video_paths = [f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/videos/{v.filename}" for v in videos]
+    else:
+        video_paths = [os.path.abspath(os.path.join(UPLOAD_FOLDER, v.filename)) for v in videos]
+    poster_config = {
+        "title":        body.poster_title,
+        "location":     body.poster_location,
+        "sublocation":  body.poster_sublocation,
+        "distance_km":  body.poster_distance_km,
+        "run_time":     body.poster_run_time,
+        "pace":         body.poster_pace,
+        "color_scheme": body.poster_color_scheme,
+    }
+    background_tasks.add_task(run_in_thread, run_bestcut_task, job.id, video_paths, body.photo_count, poster_config)
     return job
 
 

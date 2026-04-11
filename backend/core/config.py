@@ -8,6 +8,17 @@ load_dotenv()
 # 프로젝트 루트
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# ── OCR 분류 모듈 ───────────────────────────────────────────
+OCR_CLASSIFICATION_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "OCR_Classification"))
+sys.path.insert(0, OCR_CLASSIFICATION_PATH)
+
+try:
+    from person_appearance_report.analyzer import run_report
+    from person_appearance_report.config import ReportConfig
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+
 # ── 자세 분석 모듈 ──────────────────────────────────────────
 RUNNING_POSE_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "running_pose"))
 sys.path.insert(0, RUNNING_POSE_PATH)
@@ -50,14 +61,19 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
 UPLOAD_FOLDER         = os.path.join(BASE_DIR, "videos")
 OUTPUT_FOLDER         = os.path.join(BASE_DIR, "outputs")
 OUTPUT_VIDEOS_FOLDER  = os.path.join(BASE_DIR, "outputs", "videos")
-OUTPUT_PHOTOS_FOLDER  = os.path.join(BASE_DIR, "outputs", "photos")
-OUTPUT_COACHING_FOLDER= os.path.join(BASE_DIR, "outputs", "coaching")
+OUTPUT_PHOTOS_FOLDER        = os.path.join(BASE_DIR, "outputs", "photos")
+OUTPUT_PHOTOS_BESTCUT_FOLDER= os.path.join(BASE_DIR, "outputs", "photos", "bestcut")
+OUTPUT_PHOTOS_POSTER_FOLDER = os.path.join(BASE_DIR, "outputs", "photos", "poster")
+OUTPUT_COACHING_FOLDER      = os.path.join(BASE_DIR, "outputs", "coaching")
+OUTPUT_CERT_FOLDER          = os.path.join(BASE_DIR, "outputs", "cert")
 CAMERA_CLIPS_FOLDER   = os.path.join(BASE_DIR, "outputs", "camera_clips")
 TRIMMED_CLIPS_FOLDER  = os.path.join(BASE_DIR, "outputs", "trimmed_clips")
 POSE_OUTPUT_FOLDER    = os.path.join(BASE_DIR, "outputs", "pose")
 
 for _d in [
     UPLOAD_FOLDER, OUTPUT_VIDEOS_FOLDER, OUTPUT_PHOTOS_FOLDER,
-    OUTPUT_COACHING_FOLDER, CAMERA_CLIPS_FOLDER, TRIMMED_CLIPS_FOLDER, POSE_OUTPUT_FOLDER,
+    OUTPUT_PHOTOS_BESTCUT_FOLDER, OUTPUT_PHOTOS_POSTER_FOLDER,
+    OUTPUT_COACHING_FOLDER, OUTPUT_CERT_FOLDER,
+    CAMERA_CLIPS_FOLDER, TRIMMED_CLIPS_FOLDER, POSE_OUTPUT_FOLDER,
 ]:
     os.makedirs(_d, exist_ok=True)

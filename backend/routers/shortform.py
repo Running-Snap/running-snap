@@ -5,12 +5,12 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User, Video, ShortformJob
-from schemas import ShortformJobCreate, ShortformJobResponse
+from core.database import get_db
+from core.models import User, Video, ShortformJob
+from core.schemas import ShortformJobCreate, ShortformJobResponse
 from core.security import get_current_user
 from core.utils import run_in_thread
-from core.config import UPLOAD_FOLDER
+from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.shortform import run_shortform_task
 
 router = APIRouter(prefix="/shortform-jobs", tags=["shortform"])
@@ -46,7 +46,10 @@ async def create_shortform_job(
     db.commit()
     db.refresh(job)
 
-    video_paths = [os.path.abspath(os.path.join(UPLOAD_FOLDER, v.filename)) for v in videos]
+    if AWS_BUCKET_NAME:
+        video_paths = [f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/videos/{v.filename}" for v in videos]
+    else:
+        video_paths = [os.path.abspath(os.path.join(UPLOAD_FOLDER, v.filename)) for v in videos]
     background_tasks.add_task(run_in_thread, run_shortform_task, job.id, video_paths, body.style, body.duration_sec)
     return job
 

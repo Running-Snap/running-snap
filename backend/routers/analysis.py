@@ -4,12 +4,12 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User, Video, AnalysisJob
-from schemas import AnalysisJobCreate, AnalysisJobResponse
+from core.database import get_db
+from core.models import User, Video, AnalysisJob
+from core.schemas import AnalysisJobCreate, AnalysisJobResponse
 from core.security import get_current_user
 from core.utils import run_in_thread
-from core.config import UPLOAD_FOLDER
+from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.analysis import run_analysis_task
 
 router = APIRouter(prefix="/analysis-jobs", tags=["analysis"])
@@ -31,7 +31,10 @@ async def create_analysis_job(
     db.commit()
     db.refresh(job)
 
-    video_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
+    # S3에 저장된 경우 S3 URL, 로컬에 있으면 로컬 경로 사용
+    s3_url = f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/videos/{video.filename}"
+    local_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
+    video_path = s3_url if AWS_BUCKET_NAME else local_path
     background_tasks.add_task(run_in_thread, run_analysis_task, job.id, video_path)
     return job
 

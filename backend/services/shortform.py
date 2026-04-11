@@ -3,8 +3,8 @@ import os
 import shutil
 from datetime import datetime
 
-from database import SessionLocal
-from models import ShortformJob
+from core.database import SessionLocal
+from core.models import ShortformJob
 from core.config import (
     VIDEO_EDITOR_AVAILABLE, VIDEO_EDITOR_LOCK, VIDEO_EDITOR_PATH,
     ANTHROPIC_API_KEY, OUTPUT_FOLDER, OUTPUT_VIDEOS_FOLDER,
@@ -12,20 +12,13 @@ from core.config import (
 
 
 def _get_editor_config():
-    from core.config import QWEN_API_KEY
-    if ANTHROPIC_API_KEY:
-        from src.api import VideoEditorConfig, ProcessingMode
-        return VideoEditorConfig(
-            mode=ProcessingMode.API,
-            qwen_api_key=QWEN_API_KEY or None,
-            claude_api_key=ANTHROPIC_API_KEY,
-            output_dir=OUTPUT_FOLDER,
-            cache_enabled=False,
-        )
+    from src.api import VideoEditorConfig, ProcessingMode
+
+    # 1순위: Ollama 로컬 (qwen2.5vl:7b) - 설치되면 자동으로 사용
     try:
         import requests as req
         if req.get("http://localhost:11434/api/version", timeout=2).status_code == 200:
-            from src.api import VideoEditorConfig, ProcessingMode
+            print("[SHORTFORM] Ollama 감지 → LOCAL 모드 (qwen2.5vl:7b)")
             return VideoEditorConfig(
                 mode=ProcessingMode.LOCAL,
                 ollama_model="qwen2.5vl:7b",
@@ -34,12 +27,18 @@ def _get_editor_config():
             )
     except Exception:
         pass
-    from src.api import VideoEditorConfig, ProcessingMode
+
+    # 2순위: MOCK 모드 (API 키 없이 동작)
+    print("[SHORTFORM] Ollama 미설치 → MOCK 모드")
     return VideoEditorConfig(mode=ProcessingMode.MOCK, output_dir=OUTPUT_FOLDER, cache_enabled=False)
+
+
+from services.video import upload_to_s3, download_from_s3_if_needed
 
 
 def run_shortform_task(job_id: int, video_paths: list, style: str, duration_sec: float):
     db = SessionLocal()
+    tmp_path = None
     try:
         job = db.query(ShortformJob).filter(ShortformJob.id == job_id).first()
         if not job:
@@ -47,7 +46,10 @@ def run_shortform_task(job_id: int, video_paths: list, style: str, duration_sec:
         job.status = "processing"
         db.commit()
 
-        primary_path    = video_paths[0] if video_paths else None
+        raw_path = video_paths[0] if video_paths else None
+        primary_path, is_tmp = download_from_s3_if_needed(raw_path) if raw_path else ("", False)
+        if is_tmp:
+            tmp_path = primary_path
         output_filename = None
 
         if VIDEO_EDITOR_AVAILABLE and primary_path and os.path.exists(primary_path):
@@ -90,8 +92,13 @@ def run_shortform_task(job_id: int, video_paths: list, style: str, duration_sec:
             if primary_path and os.path.exists(primary_path):
                 shutil.copy2(primary_path, dest)
 
-        job.output_filename = output_filename
-        job.status          = "done"
+        output_path = os.path.join(OUTPUT_VIDEOS_FOLDER, output_filename)
+        if os.path.exists(output_path):
+            s3_url = upload_to_s3(output_path, "shortform")
+            job.output_filename = s3_url if s3_url else output_filename
+        else:
+            job.output_filename = output_filename
+        job.status = "done"
         db.commit()
     except Exception:
         job = db.query(ShortformJob).filter(ShortformJob.id == job_id).first()
@@ -100,3 +107,5 @@ def run_shortform_task(job_id: int, video_paths: list, style: str, duration_sec:
             db.commit()
     finally:
         db.close()
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)

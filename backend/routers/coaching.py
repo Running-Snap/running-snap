@@ -5,12 +5,12 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User, Video, AnalysisJob, CoachingJob
-from schemas import CoachingJobCreate, CoachingJobResponse
+from core.database import get_db
+from core.models import User, Video, AnalysisJob, CoachingJob
+from core.schemas import CoachingJobCreate, CoachingJobResponse
 from core.security import get_current_user
 from core.utils import run_in_thread
-from core.config import UPLOAD_FOLDER
+from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME
 from services.coaching import run_coaching_task
 
 router = APIRouter(prefix="/coaching-jobs", tags=["coaching"])
@@ -53,7 +53,7 @@ async def create_coaching_job(
     db.commit()
     db.refresh(job)
 
-    video_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
+    video_path = video.s3_url if (AWS_BUCKET_NAME and video.s3_url) else os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
     background_tasks.add_task(run_in_thread, run_coaching_task, job.id, video_path, coaching_text)
     return job
 

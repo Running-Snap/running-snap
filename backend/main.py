@@ -3,17 +3,48 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.openapi.utils import get_openapi
+from fastapi.security import HTTPBearer
 
-from database import engine
-from models import Base
+from core.database import engine
+from core.models import Base
 from core.config import OUTPUT_FOLDER, BASE_DIR
 
-from routers import auth, videos, analysis, shortform, bestcut, coaching, camera
+from routers import auth, videos, analysis, shortform, bestcut, coaching, camera, admin, pose_video, cert
 
 # DB 테이블 생성
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="RunningDiary API", version="2.0.0")
+app = FastAPI(
+    title="RunningDiary API",
+    version="2.0.0",
+)
+
+# Swagger UI에서 Bearer 토큰 직접 입력 가능하도록
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+    # OAuth2 Token URL 슬래시 제거 (307 리다이렉트 방지)
+    for scheme in schema.get("components", {}).get("securitySchemes", {}).values():
+        if scheme.get("type") == "oauth2":
+            flows = scheme.get("flows", {})
+            for flow in flows.values():
+                if "tokenUrl" in flow:
+                    flow["tokenUrl"] = flow["tokenUrl"].rstrip("/")
+    # BearerAuth 추가
+    schema["components"]["securitySchemes"]["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+    }
+    for path in schema.get("paths", {}).values():
+        for op in path.values():
+            op.setdefault("security", [{"BearerAuth": []}])
+    app.openapi_schema = schema
+    return schema
+
+app.openapi = custom_openapi
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +66,9 @@ app.include_router(shortform.router)
 app.include_router(bestcut.router)
 app.include_router(coaching.router)
 app.include_router(camera.router)
+app.include_router(admin.router)
+app.include_router(pose_video.router)
+app.include_router(cert.router)
 
 
 @app.get("/")
