@@ -18,7 +18,7 @@ import {
   AnalysisJob,
   ShortformJob,
   BestcutJob,
-  formatKoreanTime,
+  formatKoreanDateTime,
 } from '@/constants/api';
 
 // 홈 상단 하이라이트 카드에서 사용할 컨텐츠 타입
@@ -26,6 +26,7 @@ type HighlightType = 'BEST_CUT' | 'SHORTFORM' | 'ANALYSIS';
 
 interface HomeHighlightItem {
   id: string;              // job id를 문자열로
+  jobId: number;
   type: HighlightType;
   thumbnailUrl: string;    // 현재는 임시 이미지, 나중에 실제 URL로 교체
   title: string;
@@ -69,39 +70,37 @@ export default function HomeScreen() {
 
         // 2) 각각을 HomeHighlightItem으로 매핑
         const analysisItems: HomeHighlightItem[] = doneAnalysis.map(
-          (job: AnalysisJob): HomeHighlightItem => ({
-            id: `analysis-${job.id}`,
-            type: 'ANALYSIS',
-            thumbnailUrl:
-              'https://via.placeholder.com/300x180.png?text=Analysis', // TODO: 실제 썸네일 URL로 교체
-            title: '자세 분석 결과',
-            createdAt: formatKoreanTime(job.created_at),
-          }),
-        );
+  (job: AnalysisJob): HomeHighlightItem => ({
+    id: `analysis-${job.id}`,
+    jobId: job.id,
+    type: 'ANALYSIS',
+    thumbnailUrl: '',
+    title: '자세 분석 결과',
+    createdAt: formatKoreanDateTime(job.created_at),
+  }),
+);
 
-        const shortformItems: HomeHighlightItem[] = doneShortforms.map(
-          (job: ShortformJob): HomeHighlightItem => ({
-            id: `shortform-${job.id}`,
-            type: 'SHORTFORM',
-            thumbnailUrl:
-              'https://via.placeholder.com/300x180.png?text=Shortform',
-            title: job.style
-              ? `숏폼 (${job.style})`
-              : '숏폼 하이라이트',
-            createdAt: formatKoreanTime(job.created_at),
-          }),
-        );
+const shortformItems: HomeHighlightItem[] = doneShortforms.map(
+  (job: ShortformJob): HomeHighlightItem => ({
+    id: `shortform-${job.id}`,
+    jobId: job.id,
+    type: 'SHORTFORM',
+    thumbnailUrl: '',
+    title: job.style ? `숏폼 (${job.style})` : '숏폼 하이라이트',
+    createdAt: formatKoreanDateTime(job.created_at),
+  }),
+);
 
-        const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
-          (job: BestcutJob): HomeHighlightItem => ({
-            id: `bestcut-${job.id}`,
-            type: 'BEST_CUT',
-            thumbnailUrl:
-              'https://via.placeholder.com/300x180.png?text=Best+Cut',
-            title: '베스트 컷 결과',
-            createdAt: formatKoreanTime(job.created_at),
-          }),
-        );
+const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
+  (job: BestcutJob): HomeHighlightItem => ({
+    id: `bestcut-${job.id}`,
+    jobId: job.id,
+    type: 'BEST_CUT',
+    thumbnailUrl: '',
+    title: '베스트 컷 결과',
+    createdAt: formatKoreanDateTime(job.created_at),
+  }),
+);
 
         // 3) 하나의 배열로 합치고, 최신 순으로 정렬
         const merged = [
@@ -126,54 +125,77 @@ export default function HomeScreen() {
 
   // 하이라이트 카드 탭 시 상세 화면으로 이동하는 핸들러
   const handlePressHighlight = (item: HomeHighlightItem) => {
-    // TODO: 추후 type별로 다른 상세 화면으로 route 분기
-    // 예시:
-    // if (item.type === 'BEST_CUT') router.push(`/best-cut-result?id=${item.id}`);
-    // 지금은 일단 베스트컷 히스토리로 이동
-    if (item.type === 'BEST_CUT') {
-      router.push('/best-cut-history');
-    } else if (item.type === 'SHORTFORM') {
-      router.push('/shortform-list');
-    } else {
-      router.push('/history');
-    }
-  };
+  if (item.type === 'BEST_CUT') {
+    router.push({
+      pathname: '/best-cut-result',
+      params: { jobId: String(item.jobId) },
+    });
+  } else if (item.type === 'SHORTFORM') {
+    router.push({
+      pathname: '/shortform-result',
+      params: { jobId: String(item.jobId) },
+    });
+  } else {
+    router.push({
+      pathname: '/analysis-result',
+      params: { jobId: String(item.jobId) },
+    });
+  }
+};
 
   // 상단 캐러셀 카드 UI
   const renderHighlightItem = ({ item }: { item: HomeHighlightItem }) => (
-    <TouchableOpacity
-      style={styles.highlightCard}
-      activeOpacity={0.9}
-      onPress={() => handlePressHighlight(item)}
-    >
+  <TouchableOpacity
+    style={styles.highlightCard}
+    activeOpacity={0.9}
+    onPress={() => handlePressHighlight(item)}
+  >
+    {item.thumbnailUrl ? (
       <Image
         source={{ uri: item.thumbnailUrl }}
         style={styles.highlightThumbnail}
         resizeMode="cover"
       />
-      <View style={styles.highlightInfoRow}>
-        <View
+    ) : (
+      <View
+        style={[
+          styles.highlightThumbnail,
+          styles.highlightThumbnailFallback,
+          { backgroundColor: HIGHLIGHT_TYPE_COLOR[item.type] + '15' },
+        ]}
+      >
+        <Text style={styles.highlightFallbackIcon}>
+          {item.type === 'BEST_CUT' ? '📸' : item.type === 'SHORTFORM' ? '🎬' : '🏃'}
+        </Text>
+        <Text style={[styles.highlightFallbackLabel, { color: HIGHLIGHT_TYPE_COLOR[item.type] }]}>
+          {HIGHLIGHT_TYPE_LABEL[item.type]}
+        </Text>
+      </View>
+    )}
+
+    <View style={styles.highlightInfoRow}>
+      <View
+        style={[
+          styles.highlightBadge,
+          { backgroundColor: HIGHLIGHT_TYPE_COLOR[item.type] + '20' },
+        ]}
+      >
+        <Text
           style={[
-            styles.highlightBadge,
-            { backgroundColor: HIGHLIGHT_TYPE_COLOR[item.type] + '20' },
+            styles.highlightBadgeText,
+            { color: HIGHLIGHT_TYPE_COLOR[item.type] },
           ]}
         >
-          <Text
-            style={[
-              styles.highlightBadgeText,
-              { color: HIGHLIGHT_TYPE_COLOR[item.type] },
-            ]}
-          >
-            {HIGHLIGHT_TYPE_LABEL[item.type]}
-          </Text>
-        </View>
-        <Text style={styles.highlightDate}>{item.createdAt}</Text>
+          {HIGHLIGHT_TYPE_LABEL[item.type]}
+        </Text>
       </View>
-      <Text style={styles.highlightTitle} numberOfLines={1}>
-        {item.title}
-      </Text>
-    </TouchableOpacity>
-  );
+      <Text style={styles.highlightDate}>{item.createdAt}</Text>
+    </View>
+    <Text style={styles.highlightTitle} numberOfLines={1}>
+      {item.title}
+    </Text>
+  </TouchableOpacity>
+); 
 
   return (
     <ScrollView style={styles.container}>
@@ -213,43 +235,9 @@ export default function HomeScreen() {
           />
         )}
       </View>
-
-      {/* 새 컨텐츠 만들기 섹션 */}
-      <View style={styles.mainButtonsSection}>
-        <Text style={styles.sectionTitle}>새 컨텐츠 만들기</Text>
-
-        <View style={styles.mainButtons}>
-          <TouchableOpacity
-            style={[styles.mainButton, styles.analyzeButton]}
-            onPress={() => router.push('/analyze-video')}
-          >
-            <Text style={styles.mainButtonIcon}>🎥</Text>
-            <Text style={styles.mainButtonTitle}>영상 분석하기</Text>
-            <Text style={styles.mainButtonSubtitle}>AI가 자세를 분석해드려요</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.mainButton, styles.shortformButton]}
-            onPress={() => router.push('/create-shortform')}
-          >
-            <Text style={styles.mainButtonIcon}>✨</Text>
-            <Text style={styles.mainButtonTitle}>숏폼 만들기</Text>
-            <Text style={styles.mainButtonSubtitle}>여러 영상을 하나로 편집</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.mainButton, styles.bestCutButton]}
-            onPress={() => router.push('/best-cut')}
-          >
-            <Text style={styles.mainButtonIcon}>📸</Text>
-            <Text style={styles.mainButtonTitle}>베스트 컷 추출</Text>
-            <Text style={styles.mainButtonSubtitle}>
-              AI가 최고의 순간을 찾아드려요
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
+      
+      
+    
       {/* 기록 섹션 */}
       <View style={styles.section}>
         {/* 최근 분석 기록 */}
@@ -401,6 +389,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#000',
+  },
+  highlightThumbnailFallback: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  },
+  highlightFallbackIcon: {
+  fontSize: 36,
+  },
+  highlightFallbackLabel: {
+  fontSize: 13,
+  fontWeight: '600',
   },
   mainButtonsSection: {
     paddingHorizontal: 16,

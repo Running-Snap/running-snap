@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { apiListBestcutJobs, BestcutJob } from '@/constants/api';
+import { apiListBestcutJobs, BestcutJob, formatKoreanDateTime } from '@/constants/api';
 
 export default function BestCutHistoryScreen() {
   const [jobs, setJobs] = useState<BestcutJob[]>([]);
@@ -42,7 +42,7 @@ export default function BestCutHistoryScreen() {
           ) : (
             jobs.map(job => {
               const videoCount = job.video_ids_json ? (JSON.parse(job.video_ids_json) as number[]).length : 1;
-              const date = job.created_at ? new Date(job.created_at).toLocaleDateString('ko-KR') : '';
+              const date = formatKoreanDateTime(job.created_at);
               return (
                 <TouchableOpacity
                   key={job.id}

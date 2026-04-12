@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { apiListAnalysisJobs, AnalysisJob, parseUtcDate } from '@/constants/api';
+import { apiListAnalysisJobs, AnalysisJob, formatKoreanDateTime } from '@/constants/api';
 
 type ParsedRecord = {
   id: number;
@@ -20,9 +20,7 @@ export default function HistoryScreen() {
           .filter(j => j.status === 'done' && j.result_json)
           .map(j => {
             const r = JSON.parse(j.result_json!) as { score: number };
-            const date = j.created_at
-              ? (parseUtcDate(j.created_at)?.toLocaleDateString('ko-KR').replace(/\. /g, '.').replace('.', '') ?? '')
-              : '';
+            const date = formatKoreanDateTime(j.created_at);
             return { id: j.id, date, score: r.score };
           });
         setRecords(parsed);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { router } from 'expo-router';
-import { API_BASE, getToken, formatKoreanTime } from '@/constants/api';
+import { API_BASE, getToken, formatKoreanDateTime } from '@/constants/api';
 
 type ClipMatch = {
   match_id: number;
@@ -54,7 +54,7 @@ export default function MyClipsScreen() {
 
   const onRefresh = () => { setRefreshing(true); fetchClips(); };
 
-  const formatTime = (iso: string | null) => formatKoreanTime(iso);
+  const formatTime = (iso: string | null) => formatKoreanDateTime(iso);
 
   return (
     <View style={styles.container}>

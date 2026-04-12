@@ -4,32 +4,69 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─────────────────────────────────────────
 // API 기본 URL 설정
 // ─────────────────────────────────────────
-export const API_BASE = 'http://localhost:8000';
+export const API_BASE = 'https://d3b45n8fzgmww3.cloudfront.net';
 
 // ─────────────────────────────────────────
 // 인증 토큰 저장 (AsyncStorage → 앱 재시작 후에도 유지)
+// + 토큰이 어떤 서버(API_BASE)에서 발급됐는지도 함께 저장
 // ─────────────────────────────────────────
 const TOKEN_KEY = 'auth_token';
+const TOKEN_SERVER_KEY = 'auth_token_server';
+
 let _token: string | null = null;
 
+// 로그인 성공 시 토큰과 현재 서버 주소를 함께 저장
 export const setToken = async (t: string) => {
   _token = t;
-  await AsyncStorage.setItem(TOKEN_KEY, t);
+
+  await AsyncStorage.multiSet([
+    [TOKEN_KEY, t],
+    [TOKEN_SERVER_KEY, API_BASE],
+  ]);
 };
 
+// 앱 시작 시 저장된 토큰을 불러오되,
+// 현재 API_BASE와 저장된 서버 주소가 다르면 예전 토큰은 자동 삭제
 export const loadToken = async (): Promise<string | null> => {
-  const stored = await AsyncStorage.getItem(TOKEN_KEY);
-  if (stored) _token = stored;
-  return stored;
+  const [[, storedToken], [, storedServer]] = await AsyncStorage.multiGet([
+    TOKEN_KEY,
+    TOKEN_SERVER_KEY,
+  ]);
+
+  // 서버 주소가 바뀐 경우: 이전 서버에서 받은 토큰이므로 무효 처리
+  if (storedServer && storedServer !== API_BASE) {
+    _token = null;
+
+    await AsyncStorage.multiRemove([
+      TOKEN_KEY,
+      TOKEN_SERVER_KEY,
+    ]);
+
+    return null;
+  }
+
+  if (storedToken) {
+    _token = storedToken;
+    return storedToken;
+  }
+
+  _token = null;
+  return null;
 };
 
 export const getToken = () => _token;
 
+// 로그아웃 시 토큰 + 서버 정보 모두 삭제
 export const clearToken = async () => {
   _token = null;
-  await AsyncStorage.removeItem(TOKEN_KEY);
+
+  await AsyncStorage.multiRemove([
+    TOKEN_KEY,
+    TOKEN_SERVER_KEY,
+  ]);
 };
 
+// 인증이 필요한 API 요청에 Authorization 헤더 추가
 function authHeaders(): Record<string, string> {
   return _token ? { Authorization: `Bearer ${_token}` } : {};
 }
@@ -296,11 +333,24 @@ export function parseUtcDate(iso: string | null | undefined): Date | null {
   return new Date(s);
 }
 
-export function formatKoreanTime(iso: string | null | undefined): string {
-  const d = parseUtcDate(iso);
-  if (!d) return '-';
-  return d.toLocaleString('ko-KR');
-}
+export const formatKoreanDateTime = (utcString?: string | null) => {
+  if (!utcString) return '';
+
+  const d = parseUtcDate(utcString);
+  if (!d) return '';
+
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+
+  const ampm = hours >= 12 ? '오후' : '오전';
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+
+  return `${year}.${month}.${day}. ${ampm} ${displayHour}:${minutes}`;
+};
 
 // ─────────────────────────────────────────
 // 작업 완료까지 폴링

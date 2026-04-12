@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { apiListShortformJobs, ShortformJob } from '@/constants/api';
+import { apiListShortformJobs, ShortformJob, formatKoreanDateTime } from '@/constants/api';
 
 export default function ShortformListScreen() {
   const [jobs, setJobs] = useState<ShortformJob[]>([]);
@@ -42,7 +42,7 @@ export default function ShortformListScreen() {
           ) : (
             jobs.map(job => {
               const videoCount = job.video_ids_json ? (JSON.parse(job.video_ids_json) as number[]).length : 1;
-              const date = job.created_at ? new Date(job.created_at).toLocaleDateString('ko-KR') : '';
+              const date = formatKoreanDateTime(job.created_at);
               return (
                 <TouchableOpacity
                   key={job.id}

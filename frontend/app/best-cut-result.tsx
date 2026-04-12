@@ -11,6 +11,13 @@ type BestCut = {
   timestamp: string;
   description: string;
 };
+const getCutUri = (cut: BestCut) => {
+  if (!cut.photo_url) return null;
+
+  return cut.photo_url.startsWith('http')
+    ? cut.photo_url
+    : `${API_BASE}${cut.photo_url}`;
+};
 
 export default function BestCutResultScreen() {
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
@@ -19,30 +26,38 @@ export default function BestCutResultScreen() {
   const [viewingCut, setViewingCut] = useState<BestCut | null>(null);
 
   useEffect(() => {
-    if (!jobId) return;
-    apiGetBestcutJob(Number(jobId))
-      .then(job => {
-        if (job.result_json) {
-          setCuts(JSON.parse(job.result_json) as BestCut[]);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, [jobId]);
+  if (!jobId) return;
+  apiGetBestcutJob(Number(jobId))
+    .then(job => {
+      console.log('BESTCUT JOB RESULT_JSON:', job.result_json); // ← 추가
 
-  const handleSaveCut = (cut: BestCut) => {
-    if (cut.photo_url) {
-      Alert.alert('저장', `${cut.timestamp} 컷 저장 링크:\n${API_BASE}${cut.photo_url}`);
-    } else {
-      Alert.alert('알림', '사진 파일이 없습니다.');
-    }
-  };
+      if (job.result_json) {
+        const cuts = JSON.parse(job.result_json) as BestCut[];
+        console.log('PARSED CUTS:', cuts);                      // ← 이것도 추가
+        setCuts(cuts);
+      }
+    })
+    .catch(() => {})
+    .finally(() => setIsLoading(false));
+}, [jobId]);
+
+ const handleSaveCut = (cut: BestCut) => {
+  const uri = getCutUri(cut);
+
+  if (uri) {
+    Alert.alert('저장', `${cut.timestamp} 컷 저장 링크:\n${uri}`);
+  } else {
+    Alert.alert('알림', '사진 파일이 없습니다.');
+  }
+};
+
 
   const handleSaveAll = () => {
     Alert.alert('저장 완료', `${cuts.length}개의 베스트 컷 정보를 확인하세요.`);
   };
 
   if (isLoading) {
+
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF9500" />
@@ -50,6 +65,7 @@ export default function BestCutResultScreen() {
       </View>
     );
   }
+const viewingUri = viewingCut ? getCutUri(viewingCut) : null;
 
   return (
     <View style={styles.container}>
@@ -70,15 +86,17 @@ export default function BestCutResultScreen() {
           </Text>
         </View>
 
-        {cuts.map((cut, index) => (
+        {cuts.map((cut, index) => {
+            const uri = getCutUri(cut);
+            return (
           <View key={index} style={styles.cutCard}>
-            <TouchableOpacity onPress={() => cut.photo_url && setViewingCut(cut)}>
-              {cut.photo_url ? (
-                <Image
-                  source={{ uri: `${API_BASE}${cut.photo_url}` }}
-                  style={styles.cutImage}
-                  resizeMode="cover"
-                />
+            <TouchableOpacity onPress={() => uri && setViewingCut(cut)}>
+              {uri ? (
+          <Image
+            source={{ uri }}
+            style={styles.cutImage}
+            resizeMode="cover"
+          />
               ) : (
                 <View style={styles.cutImagePlaceholder}>
                   <Text style={styles.cutImageIcon}>📸</Text>
@@ -95,7 +113,8 @@ export default function BestCutResultScreen() {
               <Text style={styles.saveButtonText}>저장</Text>
             </TouchableOpacity>
           </View>
-        ))}
+            );
+})}
       </ScrollView>
 
       {/* 전체화면 이미지 모달 */}
@@ -109,13 +128,13 @@ export default function BestCutResultScreen() {
           <TouchableOpacity style={styles.modalClose} onPress={() => setViewingCut(null)}>
             <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>
-          {viewingCut?.photo_url && (
-            <Image
-              source={{ uri: `${API_BASE}${viewingCut.photo_url}` }}
-              style={styles.modalImage}
-              resizeMode="contain"
-            />
-          )}
+          {viewingUri && (
+  <Image
+    source={{ uri: viewingUri }}
+    style={styles.modalImage}
+    resizeMode="contain"
+  />
+)}
           <View style={styles.modalInfo}>
             <Text style={styles.modalDescription}>{viewingCut?.description}</Text>
             <Text style={styles.modalTimestamp}>📍 {viewingCut?.timestamp}</Text>
