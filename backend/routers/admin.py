@@ -1,7 +1,6 @@
 """관리자 API - 영상 배정, OCR 결과 조회/수정"""
 import tempfile
 
-import boto3
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -9,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, CameraClip, DetectedBib, ClipMatch
-from core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BUCKET_NAME, AWS_REGION
-from core.utils import run_in_thread
+from core.config import AWS_BUCKET_NAME
+from services.video import get_s3_client, download_from_s3_if_needed
 from services.matching import auto_process
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -33,24 +32,18 @@ def assign_video(req: AssignRequest, db: Session = Depends(get_db)):
     if not video:
         raise HTTPException(status_code=404, detail="영상 없음")
 
-    s3 = boto3.client(
-        "s3",
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    )
+    s3_url = f"https://{AWS_BUCKET_NAME}.s3.amazonaws.com/videos/{video.filename}"
     tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp.close()
     try:
-        s3.download_file(AWS_BUCKET_NAME, f"videos/{video.filename}", tmp.name)
+        get_s3_client().download_file(AWS_BUCKET_NAME, f"videos/{video.filename}", tmp.name)
     except ClientError as e:
         raise HTTPException(status_code=404, detail=f"S3 다운로드 실패: {str(e)}")
-    finally:
-        tmp.close()
 
     video.user_id = req.user_id
     db.commit()
 
-    run_in_thread(auto_process, req.user_id, tmp.name)
+    auto_process.delay(req.user_id, tmp.name)
     return {"ok": True, "message": "자세분석/베스트컷/숏폼 자동 실행 시작"}
 
 

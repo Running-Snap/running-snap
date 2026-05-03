@@ -3,41 +3,15 @@ import json
 import os
 import random
 import tempfile
-import threading
-import time
 
-import boto3
-
-# 분석 작업은 동시에 1개만 실행 (Gemini 과부하 방지)
-_ANALYSIS_SEMAPHORE = threading.Semaphore(1)
 import numpy as np
 import pandas as pd
 
 from core.database import SessionLocal
 from core.models import AnalysisJob
-from core.config import POSE_ANALYZER_AVAILABLE, POSE_MODEL_PATH, POSE_OUTPUT_FOLDER, \
-    ANTHROPIC_API_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BUCKET_NAME, AWS_REGION
-
-
-def _download_from_s3(s3_url: str, local_path: str) -> bool:
-    """S3 URL에서 파일을 로컬로 다운로드. 성공 시 True."""
-    try:
-        s3 = boto3.client(
-            "s3",
-            region_name=AWS_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        )
-        # URL에서 s3_key 추출: https://bucket.s3.region.amazonaws.com/key
-        if "amazonaws.com/" in s3_url:
-            s3_key = s3_url.split("amazonaws.com/")[-1].split("?")[0]
-        else:
-            return False
-        s3.download_file(AWS_BUCKET_NAME, s3_key, local_path)
-        return True
-    except Exception as e:
-        print(f"[S3 DOWNLOAD ERROR] {e}")
-        return False
+from core.config import POSE_ANALYZER_AVAILABLE, POSE_MODEL_PATH, POSE_OUTPUT_FOLDER, ANTHROPIC_API_KEY
+from core.celery_app import celery_app
+from services.video import download_from_s3_if_needed
 
 
 def _calc_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
@@ -284,7 +258,8 @@ def build_mock_result() -> dict:
     }
 
 
-def run_analysis_task(job_id: int, video_path: str):
+@celery_app.task(name="analysis.run", bind=True, max_retries=2)
+def run_analysis_task(self, job_id: int, video_path: str):
     db = SessionLocal()
     tmp_path = None
 
@@ -300,25 +275,17 @@ def run_analysis_task(job_id: int, video_path: str):
         db.close()
         return
 
-    print(f"[ANALYSIS] job_id={job_id} 대기 중 (큐)...")
-    _ANALYSIS_SEMAPHORE.acquire()
     try:
         print(f"[ANALYSIS] job_id={job_id} 분석 시작")
 
         # S3 URL인 경우 임시 파일로 다운로드
-        actual_path = video_path
-        if video_path.startswith("http") and "amazonaws.com" in video_path:
-            ext = ".mp4"
-            tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
-            tmp.close()
-            tmp_path = tmp.name
-            print(f"[ANALYSIS] job_id={job_id} S3 다운로드 중...")
-            if _download_from_s3(video_path, tmp_path):
-                actual_path = tmp_path
-                print(f"[ANALYSIS] job_id={job_id} S3 다운로드 완료")
-            else:
-                actual_path = ""
-                print(f"[ANALYSIS] job_id={job_id} S3 다운로드 실패")
+        actual_path, is_tmp = download_from_s3_if_needed(video_path)
+        if is_tmp:
+            tmp_path = actual_path
+        if not actual_path:
+            print(f"[ANALYSIS] job_id={job_id} S3 다운로드 실패")
+        elif is_tmp:
+            print(f"[ANALYSIS] job_id={job_id} S3 다운로드 완료")
 
         result = None
         if POSE_ANALYZER_AVAILABLE and os.path.exists(actual_path) and os.path.exists(POSE_MODEL_PATH):
@@ -373,7 +340,6 @@ def run_analysis_task(job_id: int, video_path: str):
             job.result_json = json.dumps({"error": str(e)}, ensure_ascii=False)
             db.commit()
     finally:
-        _ANALYSIS_SEMAPHORE.release()
         db.close()
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)

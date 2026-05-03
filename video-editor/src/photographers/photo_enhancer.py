@@ -1,6 +1,10 @@
 """
 사진 후보정기
-프로 사진작가 스타일의 후보정 적용
+프로 사진작가 스타일의 후보정 적용 + AI 화질 개선
+
+보정 파이프라인:
+  [기존] 노출/대비/채도/샤프닝/비네팅  (OpenCV + PIL)
+  [신규] AI 모션블러 제거 + Real-ESRGAN 업스케일  (PyTorch MPS)
 """
 from pathlib import Path
 from typing import Optional, Union, Tuple, List
@@ -339,10 +343,55 @@ class PhotoEnhancer:
         output_path: str,
         preset: str = "sports_action",
         format: str = "jpeg",
-        quality: int = 95
+        quality: int = 95,
+        ai_enhance: bool = False,
+        ai_upscale: float = 2.0,
+        ai_deblur: bool = True,
+        ai_model_path: str = "models/RealESRGAN_x4plus.pth"
     ) -> str:
-        """보정 후 저장 (한번에)"""
+        """
+        보정 후 저장 (한번에)
+
+        Args:
+            input_path: 입력 이미지 경로
+            output_path: 출력 경로
+            preset: 색감 보정 프리셋
+            format: 출력 포맷 (jpeg/png)
+            quality: JPEG 품질
+            ai_enhance: AI 화질 개선 활성화 여부
+            ai_upscale: AI 업스케일 배율 (1.0~4.0, ai_enhance=True일 때만)
+            ai_deblur: 모션블러 제거 여부 (ai_enhance=True일 때만)
+            ai_model_path: Real-ESRGAN 모델 경로
+        """
+        # 기존 색감 보정 파이프라인
         img = self.enhance(input_path, preset)
+
+        # AI 화질 개선 (선택)
+        if ai_enhance:
+            try:
+                from .super_resolution import AIImageEnhancer
+                self.console.print(f"  [cyan]AI 화질 개선 중... (업스케일 {ai_upscale}x)[/cyan]")
+
+                ai = AIImageEnhancer(model_path=ai_model_path)
+                # PIL Image → AI 처리 → PIL Image
+                import numpy as np
+                img_np = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                result_np = ai.enhance(
+                    image=img_np,
+                    upscale=ai_upscale,
+                    deblur=ai_deblur,
+                    return_original_size=True   # 원본 크기 유지 (고품질 디테일만 추출)
+                )
+                img = Image.fromarray(cv2.cvtColor(result_np, cv2.COLOR_BGR2RGB))
+                self.console.print(f"  [green]✓ AI 화질 개선 완료[/green]")
+
+            except FileNotFoundError as e:
+                self.console.print(f"  [yellow]⚠ AI 모델 없음, 건너뜀: {e}[/yellow]")
+            except ImportError:
+                self.console.print(f"  [yellow]⚠ AI 모듈 없음 (pip install torch spandrel)[/yellow]")
+            except Exception as e:
+                self.console.print(f"  [yellow]⚠ AI 화질 개선 실패, 건너뜀: {e}[/yellow]")
+
         return self.save(img, output_path, format, quality)
 
     def batch_enhance(

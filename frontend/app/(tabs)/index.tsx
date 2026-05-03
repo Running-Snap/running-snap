@@ -18,7 +18,12 @@ import {
   AnalysisJob,
   ShortformJob,
   BestcutJob,
+<<<<<<< HEAD
   formatKoreanDateTime,
+=======
+  formatKoreanTime,
+  API_BASE,
+>>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
 } from '@/constants/api';
 
 // 홈 상단 하이라이트 카드에서 사용할 컨텐츠 타입
@@ -91,6 +96,7 @@ const shortformItems: HomeHighlightItem[] = doneShortforms.map(
   }),
 );
 
+<<<<<<< HEAD
 const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
   (job: BestcutJob): HomeHighlightItem => ({
     id: `bestcut-${job.id}`,
@@ -101,6 +107,31 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
     createdAt: formatKoreanDateTime(job.created_at),
   }),
 );
+=======
+        const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
+          (job: BestcutJob): HomeHighlightItem => {
+            let thumbnailUrl = '';
+            try {
+              if (job.result_json) {
+                const cuts = JSON.parse(job.result_json) as { photo_url: string | null }[];
+                const first = cuts.find(c => c.photo_url);
+                if (first?.photo_url) {
+                  thumbnailUrl = first.photo_url.startsWith('http')
+                    ? first.photo_url
+                    : `${API_BASE}${first.photo_url}`;
+                }
+              }
+            } catch {}
+            return {
+              id: `bestcut-${job.id}`,
+              type: 'BEST_CUT',
+              thumbnailUrl,
+              title: '베스트 컷 결과',
+              createdAt: formatKoreanTime(job.created_at),
+            };
+          },
+        );
+>>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
 
         // 3) 하나의 배열로 합치고, 최신 순으로 정렬
         const merged = [
@@ -125,6 +156,7 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
 
   // 하이라이트 카드 탭 시 상세 화면으로 이동하는 핸들러
   const handlePressHighlight = (item: HomeHighlightItem) => {
+<<<<<<< HEAD
   if (item.type === 'BEST_CUT') {
     router.push({
       pathname: '/best-cut-result',
@@ -142,6 +174,23 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
     });
   }
 };
+=======
+    // TODO: 추후 type별로 다른 상세 화면으로 route 분기
+    // 예시:
+    // if (item.type === 'BEST_CUT') router.push(`/best-cut-result?id=${item.id}`);
+    // 지금은 일단 베스트컷 히스토리로 이동
+    if (item.type === 'BEST_CUT') {
+      const jobId = item.id.replace('bestcut-', '');
+      router.push(`/best-cut-result?jobId=${jobId}`);
+    } else if (item.type === 'SHORTFORM') {
+      const jobId = item.id.replace('shortform-', '');
+      router.push(`/shortform-result?jobId=${jobId}`);
+    } else {
+      const jobId = item.id.replace('analysis-', '');
+      router.push(`/analysis-result?jobId=${jobId}`);
+    }
+  };
+>>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
 
   // 상단 캐러셀 카드 UI
   const renderHighlightItem = ({ item }: { item: HomeHighlightItem }) => (

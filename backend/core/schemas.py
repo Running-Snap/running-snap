@@ -68,12 +68,12 @@ class BestCutJobCreate(BaseModel):
     video_ids: List[int]        # 영상 ID 목록 (최소 1개, 프론트에서 업로드 후 받은 video_id들)
     photo_count: int = 5
     # 포스터 설정 (선택)
-    poster_title:       Optional[str] = "RUNNING\nDIARY"
-    poster_location:    Optional[str] = "Running Diary"
-    poster_sublocation: Optional[str] = "sublocation"
-    poster_distance_km: Optional[float] = 0.0
-    poster_run_time:    Optional[str] = "--'--\""
-    poster_pace:        Optional[str] = "--'--\"/km"
+    poster_title:       Optional[str] = "2026\nMIRACLE MARATHON"
+    poster_location:    Optional[str] = "Daejeon, Republic of Korea"
+    poster_sublocation: Optional[str] = "Gapcheon"
+    poster_distance_km: Optional[float] = 10.0
+    poster_run_time:    Optional[str] = ""
+    poster_pace:        Optional[str] = ""
     poster_color_scheme:Optional[str] = "warm"   # warm / cool / neutral
 
 
@@ -115,6 +115,7 @@ class CertJobCreate(BaseModel):
     # 이벤트 정보
     title:          Optional[str] = "RUNNING\nDIARY"
     location:       Optional[str] = "Running Diary"
+    date:           Optional[str] = ""           # e.g. "2026.04.19" (비어있으면 오늘 날짜 자동)
     distance_km:    Optional[float] = 0.0
     run_time:       Optional[str] = ""           # e.g. "34'18\""
     pace:           Optional[str] = ""           # e.g. "6'35\"/km"

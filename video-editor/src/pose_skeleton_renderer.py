@@ -259,9 +259,9 @@ def _draw_skeleton(
     # 작은 사람 보정 (320px 기준)
     size_scale = max(1.0, 320.0 / max(person_h, 1))
     lw_hi  = max(2, int(person_h * 0.010 * size_scale))  # 하이라이트 선
-    lw_dim = max(1, int(person_h * 0.004 * size_scale))  # 배경 선
+    lw_dim = max(3, int(person_h * 0.010 * size_scale))  # 배경 선 (두께 증가)
     r_hi   = max(3, int(person_h * 0.010 * size_scale))  # 하이라이트 관절 반지름
-    r_dot  = max(2, int(person_h * 0.005 * size_scale))  # 배경 관절 반지름
+    r_dot  = max(4, int(person_h * 0.010 * size_scale))  # 배경 관절 반지름 (크기 증가)
 
     # ── Layer 1: 배경 skeleton — 전신 회색 (끊김 없이) ─────────────
     # skip 조건: 양 끝 모두 highlight일 때만 (한쪽만 highlight면 gray로 그려줌)
@@ -282,8 +282,8 @@ def _draw_skeleton(
         if p is None:
             continue
         cv2.circle(dim_layer, p, r_dot, DIM_COLOR, -1, cv2.LINE_AA)
-    # 0.45 alpha → 회색 스켈레톤이 확실히 보임 (기존 0.22는 너무 희미)
-    result = cv2.addWeighted(dim_layer, 0.45, frame, 0.55, 0)
+    # 0.65 alpha → 회색 스켈레톤 더 선명하게
+    result = cv2.addWeighted(dim_layer, 0.65, frame, 0.35, 0)
 
     if not highlight_set:
         return result
@@ -462,7 +462,7 @@ def _render_skeleton(
     ret = os.system(
         f'"{ffmpeg}" -y -i "{tmp_path}" -i "{source_video}" '
         f'-c:v libx264 -crf 17 -preset fast '
-        f'-c:a aac -map 0:v:0 -map 1:a:0 '
+        f'-c:a aac -map 0:v:0 -map 1:a:0? '
         f'"{output_video}" -loglevel error'
     )
     if ret != 0:

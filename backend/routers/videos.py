@@ -3,39 +3,27 @@ import os
 from datetime import datetime
 from typing import Optional
 
-import boto3
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from core.models import User, Video, AnalysisJob, BestCutJob, ShortformJob
+from core.models import User, Video, AnalysisJob, BestCutJob
 from core.config import (
     SECRET_KEY, ALGORITHM,
-    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_BUCKET_NAME, AWS_REGION,
+    AWS_BUCKET_NAME, AWS_REGION,
     UPLOAD_FOLDER,
 )
 from core.security import get_current_user
-from core.utils import run_in_thread
-from services.analysis import run_analysis_task
-from services.bestcut import run_bestcut_task
-from services.shortform import run_shortform_task
+from services.matching import run_upload_pipeline
+from services.video import get_s3_client
 
 router = APIRouter(tags=["videos"])
-
-def _s3_client():
-    return boto3.client(
-        "s3",
-        region_name=AWS_REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    )
 
 
 @router.post("/upload-video/")
 async def upload_video(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -51,7 +39,7 @@ async def upload_video(
     s3_key   = f"videos/{filename}"
 
     try:
-        s3 = _s3_client()
+        s3 = get_s3_client()
         s3.upload_fileobj(file.file, AWS_BUCKET_NAME, s3_key)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=f"S3 업로드 실패: {str(e)}")
@@ -64,14 +52,13 @@ async def upload_video(
     video_url = f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{s3_key}"
     video_path = video_url if AWS_BUCKET_NAME else os.path.abspath(os.path.join(UPLOAD_FOLDER, filename))
 
-    # 자세분석 job 자동 생성
+    # 자세분석 job 생성
     analysis_job = AnalysisJob(user_id=current_user.id, video_id=db_video.id, status="pending")
     db.add(analysis_job)
     db.commit()
     db.refresh(analysis_job)
-    background_tasks.add_task(run_in_thread, run_analysis_task, analysis_job.id, video_path)
 
-    # 베스트컷 job 자동 생성
+    # 베스트컷 job 생성
     bestcut_job = BestCutJob(
         user_id=current_user.id, video_id=db_video.id,
         video_ids_json=json.dumps([db_video.id]),
@@ -80,20 +67,13 @@ async def upload_video(
     db.add(bestcut_job)
     db.commit()
     db.refresh(bestcut_job)
-    background_tasks.add_task(run_in_thread, run_bestcut_task, bestcut_job.id, [video_path], 5)
 
-    # 숏폼 job 자동 생성
-    shortform_job = ShortformJob(
-        user_id=current_user.id, video_id=db_video.id,
-        video_ids_json=json.dumps([db_video.id]),
-        style="action", duration_sec=60, status="pending",
+    # 카메라 클립과 동일한 파이프라인으로 실행 (자세분석 → 자세분석영상 → 베스트컷)
+    run_upload_pipeline.delay(
+        current_user.id, db_video.id, video_path, analysis_job.id, bestcut_job.id,
     )
-    db.add(shortform_job)
-    db.commit()
-    db.refresh(shortform_job)
-    background_tasks.add_task(run_in_thread, run_shortform_task, shortform_job.id, [video_path], "action", 60)
 
-    print(f"[UPLOAD] video_id={db_video.id} → analysis={analysis_job.id}, bestcut={bestcut_job.id}, shortform={shortform_job.id} 자동 시작")
+    print(f"[UPLOAD] video_id={db_video.id} → analysis={analysis_job.id}, bestcut={bestcut_job.id} 파이프라인 시작")
 
     return {
         "success":          True,
@@ -103,7 +83,6 @@ async def upload_video(
         "video_url":        video_url,
         "analysis_job_id":  analysis_job.id,
         "bestcut_job_id":   bestcut_job.id,
-        "shortform_job_id": shortform_job.id,
     }
 
 
@@ -133,7 +112,7 @@ async def get_video(
 
     s3_key = f"videos/{filename}"
     try:
-        s3  = _s3_client()
+        s3  = get_s3_client()
         url = s3.generate_presigned_url(
             "get_object",
             Params={"Bucket": AWS_BUCKET_NAME, "Key": s3_key},
@@ -148,7 +127,7 @@ async def get_video(
 @router.get("/my-videos/")
 async def get_my_videos(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     videos = db.query(Video).filter(Video.user_id == current_user.id).order_by(Video.id.asc()).all()
-    s3 = _s3_client()
+    s3 = get_s3_client()
     result = []
     for v in videos:
         s3_key = f"videos/{v.filename}"

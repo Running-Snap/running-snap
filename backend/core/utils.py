@@ -1,6 +1,4 @@
-import concurrent.futures
+from datetime import timezone, timedelta
 
-
-def run_in_thread(func, *args):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        executor.submit(func, *args).result()
+# 한국 표준시 (UTC+9)
+KST = timezone(timedelta(hours=9))

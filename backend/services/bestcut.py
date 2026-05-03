@@ -6,14 +6,17 @@ from core.database import SessionLocal
 from core.models import BestCutJob
 from core.config import (
     VIDEO_EDITOR_AVAILABLE, VIDEO_EDITOR_LOCK, VIDEO_EDITOR_PATH,
-    QWEN_API_KEY, ANTHROPIC_API_KEY, OUTPUT_FOLDER,
+    ANTHROPIC_API_KEY, OUTPUT_FOLDER,
     OUTPUT_PHOTOS_BESTCUT_FOLDER, OUTPUT_PHOTOS_POSTER_FOLDER,
 )
+from core.utils import KST
+from core.celery_app import celery_app
 from services.opencv import extract_frames
 from services.video import upload_to_s3, download_from_s3_if_needed
 
 
-def run_bestcut_task(job_id: int, video_paths: list, photo_count: int, poster_config: dict = None):
+@celery_app.task(name="bestcut.run", bind=True, max_retries=2)
+def run_bestcut_task(self, job_id: int, video_paths: list, photo_count: int, poster_config: dict = None, user_id: int = 0, bib: str = ""):
     db = SessionLocal()
     tmp_paths = []
     try:
@@ -69,10 +72,11 @@ def run_bestcut_task(job_id: int, video_paths: list, photo_count: int, poster_co
                     if result.success and result.photos:
                         import shutil
                         from datetime import datetime
-                        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        ts = datetime.now(KST).strftime("%Y%m%d_%H%M%S")
+                        bib_part = bib if bib else str(job_id)
                         for idx, photo_path in enumerate(result.photos, 1):
                             ext = os.path.splitext(photo_path)[1] or ".jpg"
-                            new_name = f"bestcut_{job_id}_{ts}_{idx}{ext}"
+                            new_name = f"bestcut_{user_id}_{bib_part}_{ts}_{idx}{ext}"
                             dest = os.path.join(OUTPUT_PHOTOS_BESTCUT_FOLDER, new_name)
                             if os.path.exists(photo_path):
                                 shutil.move(photo_path, dest)
@@ -82,7 +86,7 @@ def run_bestcut_task(job_id: int, video_paths: list, photo_count: int, poster_co
 
         # 2순위: OpenCV
         if not photos and primary_path and os.path.exists(primary_path):
-            photos = extract_frames(primary_path, photo_count, OUTPUT_PHOTOS_BESTCUT_FOLDER)
+            photos = extract_frames(primary_path, photo_count, OUTPUT_PHOTOS_BESTCUT_FOLDER, user_id=user_id, bib=bib)
 
         # 3순위: 추가 영상에서 보충
         if len(photos) < photo_count and len(local_video_paths) > 1:
@@ -91,7 +95,7 @@ def run_bestcut_task(job_id: int, video_paths: list, photo_count: int, poster_co
                 if len(photos) >= photo_count:
                     break
                 if os.path.exists(vpath):
-                    extra = extract_frames(vpath, remaining, OUTPUT_PHOTOS_BESTCUT_FOLDER)
+                    extra = extract_frames(vpath, remaining, OUTPUT_PHOTOS_BESTCUT_FOLDER, user_id=user_id, bib=bib)
                     photos.extend(extra)
                     remaining -= len(extra)
 
@@ -105,19 +109,20 @@ def run_bestcut_task(job_id: int, video_paths: list, photo_count: int, poster_co
                 os.chdir(VIDEO_EDITOR_PATH)
                 try:
                     from datetime import datetime
-                    poster_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    today_str = datetime.now().strftime("%Y.%m.%d")
+                    poster_ts = datetime.now(KST).strftime("%Y%m%d_%H%M%S")
+                    today_str = datetime.now(KST).strftime("%Y.%m.%d")
                     maker = PosterMaker()
+                    bib_part = bib if bib else str(job_id)
                     pc = poster_config or {}
                     event_config = {
-                        "title":        pc.get("title", "RUNNING\nDIARY"),
-                        "location":     pc.get("location", "Running Diary"),
-                        "sublocation":  pc.get("sublocation", "AI Best Cut"),
-                        "time":         datetime.now().strftime("P.M. %I:%M"),
+                        "title":        pc.get("title", "2026\nMIRACLE MARATHON"),
+                        "location":     pc.get("location", "Daejeon, Republic of Korea"),
+                        "sublocation":  pc.get("sublocation", "Gapcheon"),
+                        "time":         "A.M. 08:00",  # 임시 고정
                         "date":         today_str,
                         "distance_km":  pc.get("distance_km", 0.0),
-                        "run_time":     pc.get("run_time", "--'--\""),
-                        "pace":         pc.get("pace", "--'--\"/km"),
+                        "run_time":     "",  # 임시 비활성화
+                        "pace":         "",  # 임시 비활성화
                         "color_scheme": pc.get("color_scheme", "warm"),
                         "branding":     f"{pc.get('location', 'RUNNING DIARY')}  /  {today_str}",
                     }
@@ -127,7 +132,7 @@ def run_bestcut_task(job_id: int, video_paths: list, photo_count: int, poster_co
                         src_path = os.path.join(OUTPUT_PHOTOS_BESTCUT_FOLDER, base)
                         if os.path.exists(src_path):
                             print(f"[BESTCUT] 포스터 {p_idx}/{len(photos)} 생성 중: {base}")
-                            poster_name = f"poster_{job_id}_{poster_ts}_{p_idx}.jpg"
+                            poster_name = f"poster_{user_id}_{bib_part}_{poster_ts}_{p_idx}.jpg"
                             poster_path = os.path.join(OUTPUT_PHOTOS_POSTER_FOLDER, poster_name)
                             result = maker.make(
                                 image_path=src_path,

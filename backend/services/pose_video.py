@@ -8,6 +8,8 @@ from pathlib import Path
 from core.database import SessionLocal
 from core.models import PoseVideoJob
 from core.config import VIDEO_EDITOR_PATH, OUTPUT_COACHING_FOLDER
+from core.utils import KST
+from core.celery_app import celery_app
 from services.video import upload_to_s3, download_from_s3_if_needed
 
 POSE_MODEL_CANDIDATES = [
@@ -23,7 +25,8 @@ def _find_pose_model() -> str:
     return ""
 
 
-def run_pose_video_task(job_id: int, video_path: str, feedback_data: dict):
+@celery_app.task(name="pose_video.run", bind=True, max_retries=2)
+def run_pose_video_task(self, job_id: int, video_path: str, feedback_data: dict, user_id: int = 0, bib: str = ""):
     db = SessionLocal()
     tmp_path = None
     try:
@@ -42,8 +45,9 @@ def run_pose_video_task(job_id: int, video_path: str, feedback_data: dict):
         if not video_path or not os.path.exists(video_path):
             raise FileNotFoundError(f"영상 파일 없음: {video_path}")
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_filename = f"pose_video_{job_id}_{ts}.mp4"
+        ts = datetime.now(KST).strftime("%Y%m%d_%H%M%S")
+        bib_part = bib if bib else str(job_id)
+        output_filename = f"pose_{user_id}_{bib_part}_{ts}.mp4"
         output_path = os.path.abspath(os.path.join(OUTPUT_COACHING_FOLDER, output_filename))
         os.makedirs(OUTPUT_COACHING_FOLDER, exist_ok=True)
 

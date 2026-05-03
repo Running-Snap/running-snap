@@ -118,16 +118,25 @@ class DurationType(Enum):
 class FrameAnalysis(BaseModel):
     """단일 프레임 분석 결과"""
     timestamp: float
+    # ── 기존 필드 (하위 호환) ────────────────────────────────────
     faces_detected: int = 0
     face_expressions: List[str] = Field(default_factory=list)
-    motion_level: float = Field(ge=0, le=1, description="0=정지, 1=격렬한 움직임")
-    composition_score: float = Field(ge=0, le=1)
-    lighting: str = Field(description="good, moderate, poor")
+    motion_level: float = Field(default=0.5, ge=0, le=1)
+    composition_score: float = Field(default=0.5, ge=0, le=1)
+    lighting: str = "moderate"
     background_type: str = ""
     is_action_peak: bool = False
-    aesthetic_score: float = Field(ge=0, le=1)
+    aesthetic_score: float = Field(default=0.5, ge=0, le=1)
     emotional_tone: str = ""
     description: str = ""
+    # ── 포스터 프레임 선별용 신규 필드 ───────────────────────────
+    runner_detected: bool = False
+    runner_center_x: float = 0.5    # 0=왼쪽, 1=오른쪽
+    runner_center_y: float = 0.5    # 0=위, 1=아래
+    runner_size: float = 0.0        # 러너 높이/프레임 높이 비율
+    limb_spread: float = 0.0        # 팔다리 펼침 정도 (0=모임, 1=역동적)
+    face_expression_quality: str = "neutral"   # positive / neutral / negative
+    poster_score: float = 0.0       # 포스터 적합도 종합점수 (0~1)
 
 class VideoAnalysis(BaseModel):
     """전체 영상 분석 결과"""

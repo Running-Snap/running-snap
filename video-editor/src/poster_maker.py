@@ -38,18 +38,77 @@ import PIL.ImageEnhance as Enhance
 
 
 # ── 폰트 경로 ─────────────────────────────────────────────────────
+def _find_font(candidates: list) -> str:
+    """후보 경로 중 존재하는 첫 번째 폰트 반환"""
+    import os
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return candidates[0]  # 없으면 첫 번째 반환 (load_default 폴백)
+
 _FONTS: Dict[str, str] = {
-    # 기존
-    "impact":    "/System/Library/Fonts/Supplemental/Impact.ttf",
-    "din_bold":  "/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf",
-    "din_alt":   "/System/Library/Fonts/Supplemental/DIN Alternate Bold.ttf",
-    "gothic":    "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
-    # 업그레이드 — 마라톤 포스터용 고품질 폰트
-    "futura":         "/System/Library/Fonts/Supplemental/Futura.ttc",
-    "gill":           "/System/Library/Fonts/Supplemental/GillSans.ttc",
-    "avenir_condensed": "/System/Library/Fonts/Avenir Next Condensed.ttc",
-    "avenir":         "/System/Library/Fonts/Avenir Next.ttc",
-    "helvetica":      "/System/Library/Fonts/HelveticaNeue.ttc",
+    "impact": _find_font([
+        "/System/Library/Fonts/Supplemental/Impact.ttf",           # macOS
+        "/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf",       # Ubuntu (굵은 스퀘어)
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "din_bold": _find_font([
+        "/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumSquare_acEB.ttf",    # Ubuntu
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "din_alt": _find_font([
+        "/System/Library/Fonts/Supplemental/DIN Alternate Bold.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumSquareB.ttf",        # Ubuntu
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "gothic": _find_font([
+        "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",     # Ubuntu
+    ]),
+    "futura": _find_font([
+        "/System/Library/Fonts/Supplemental/Futura.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf",       # Ubuntu (굵고 깔끔)
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "gill": _find_font([
+        "/System/Library/Fonts/Supplemental/GillSans.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "avenir_condensed": _find_font([
+        "/System/Library/Fonts/Avenir Next Condensed.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumSquare_acB.ttf",     # Ubuntu
+        "/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Bold.ttf",
+    ]),
+    "avenir": _find_font([
+        "/System/Library/Fonts/Avenir Next.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf", # Ubuntu
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "helvetica": _find_font([
+        "/System/Library/Fonts/HelveticaNeue.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumGothicExtraBold.ttf", # Ubuntu
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "inter_black": _find_font([
+        "/usr/share/fonts/truetype/inter/Inter-Black.ttf",
+        "/System/Library/Fonts/Supplemental/Impact.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "inter_semibold": _find_font([
+        "/usr/share/fonts/truetype/inter/Inter-SemiBold.ttf",
+        "/System/Library/Fonts/Avenir Next.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]),
+    "inter_regular": _find_font([
+        "/usr/share/fonts/truetype/inter/Inter-Regular.ttf",
+        "/System/Library/Fonts/Avenir Next.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumBarunGothic.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]),
 }
 
 
@@ -391,7 +450,7 @@ class PosterMaker:
 
         y = int(H * 0.050)
         if location:
-            fnt   = _load_font("avenir", int(W * 0.034))
+            fnt   = _load_font("inter_semibold", int(W * 0.034))
             lines = self._wrap_text(location, fnt, max_w, draw)
             for line in lines:
                 lw = draw.textlength(line, font=fnt)
@@ -401,7 +460,7 @@ class PosterMaker:
         sub_parts = [s for s in [subloc, time_txt] if s]
         if sub_parts:
             sub_txt = "  ·  ".join(sub_parts)
-            fnt2    = _load_font("avenir", int(W * 0.024))
+            fnt2    = _load_font("inter_regular", int(W * 0.024))
             lines2  = self._wrap_text(sub_txt, fnt2, max_w, draw)
             for line in lines2:
                 sw = draw.textlength(line, font=fnt2)
@@ -411,7 +470,7 @@ class PosterMaker:
         # ── 상단: title ─────────────────────────────────────────
         title       = cfg.get("title", "RUN")
         fsize_title = int(W * 0.13)
-        fnt_title   = _load_font("futura", fsize_title)
+        fnt_title   = _load_font("inter_black", fsize_title)
         glow_rgb    = cs.get("glow_rgb", (200, 200, 200))
 
         ty_start  = max(y + int(H * 0.015), int(H * 0.13))
@@ -448,13 +507,13 @@ class PosterMaker:
         dist_km = cfg.get("distance_km", 0.0)
         if dist_km and float(dist_km) > 0:
             fsize_km = int(W * 0.24)
-            fnt_km   = _load_font("impact", fsize_km)
+            fnt_km   = _load_font("inter_black", fsize_km)
             km_str   = f"{float(dist_km):.1f}"
             bbox     = draw.textbbox((0, 0), km_str, font=fnt_km)
             kw       = bbox[2] - bbox[0]
 
             fsize_unit = int(W * 0.068)
-            fnt_unit   = _load_font("din_alt", fsize_unit)
+            fnt_unit   = _load_font("inter_semibold", fsize_unit)
             unit_w     = int(draw.textlength("km", font=fnt_unit))
             gap        = int(W * 0.018)
             total_w    = kw + gap + unit_w
@@ -728,7 +787,7 @@ class PosterMaker:
 
         y = int(H * 0.048)
         if location:
-            fnt   = _load_font("avenir", int(W * 0.034))
+            fnt   = _load_font("inter_semibold", int(W * 0.034))
             lines = self._wrap_text(location, fnt, max_w, draw)
             for line in lines:
                 lw = draw.textlength(line, font=fnt)
@@ -737,7 +796,7 @@ class PosterMaker:
 
         if subloc or run_clock:
             sub_txt = f"{subloc}  ·  {run_clock}" if subloc and run_clock else (subloc or run_clock)
-            fnt2  = _load_font("avenir", int(W * 0.024))
+            fnt2  = _load_font("inter_regular", int(W * 0.024))
             lines2 = self._wrap_text(sub_txt, fnt2, max_w, draw)
             for line in lines2:
                 sw = draw.textlength(line, font=fnt2)
@@ -753,7 +812,7 @@ class PosterMaker:
         # 피드: 폰트 작게 (전체 높이의 40% 이내 확보)
         # 사진: 기존 크기
         fsize      = int(W * 0.09) if poster_mode == "feed" else int(W * 0.13)
-        fnt_title  = _load_font("futura", fsize)
+        fnt_title  = _load_font("inter_black", fsize)
         glow_rgb   = cs.get("glow_rgb", (200, 200, 200))
         ty_start   = int(H * ty_ratio)
 
@@ -812,9 +871,9 @@ class PosterMaker:
         draw.line([(MARGIN, line_y), (W - MARGIN, line_y)],
                   fill=(200, 200, 200), width=1)
 
-        # 거리 (대형 Impact)
+        # 거리 (대형 Inter Black)
         fsize_dist = int(W * 0.22)
-        fnt_dist   = _load_font("impact", fsize_dist)
+        fnt_dist   = _load_font("inter_black", fsize_dist)
         dist_str   = f"{dist_km:.1f}" if isinstance(dist_km, float) else str(dist_km)
         bbox = draw.textbbox((0, 0), dist_str, font=fnt_dist)
         dw   = bbox[2] - bbox[0]
@@ -825,7 +884,7 @@ class PosterMaker:
 
         # "km" 단위
         fsize_unit = int(W * 0.062)
-        fnt_unit   = _load_font("din_alt", fsize_unit)
+        fnt_unit   = _load_font("inter_semibold", fsize_unit)
         ux = dx + dw + int(W * 0.018)
         uy = dy + fsize_dist - fsize_unit - int(H * 0.008)
         draw.text((ux, uy), "km", font=fnt_unit, fill=cs["stat"])

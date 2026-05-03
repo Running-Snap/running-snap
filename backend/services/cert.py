@@ -5,6 +5,8 @@ import shutil
 from datetime import datetime
 
 from core.database import SessionLocal
+from core.utils import KST
+from core.celery_app import celery_app
 from core.models import CertJob
 from core.config import (
     VIDEO_EDITOR_AVAILABLE, VIDEO_EDITOR_LOCK, VIDEO_EDITOR_PATH,
@@ -13,7 +15,8 @@ from core.config import (
 from services.video import upload_to_s3, download_from_s3_if_needed
 
 
-def run_cert_task(job_id: int, video_path: str, mode: str, event_config: dict):
+@celery_app.task(name="cert.run", bind=True, max_retries=2)
+def run_cert_task(self, job_id: int, video_path: str, mode: str, event_config: dict, bib: str = ""):
     db = SessionLocal()
     tmp_path = None
     try:
@@ -31,8 +34,9 @@ def run_cert_task(job_id: int, video_path: str, mode: str, event_config: dict):
         if not local_path or not os.path.exists(local_path):
             raise FileNotFoundError(f"영상 파일을 찾을 수 없습니다: {video_path}")
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_name = f"cert_{job_id}_{ts}.mp4"
+        ts = datetime.now(KST).strftime("%Y%m%d_%H%M%S")
+        bib_part = bib if bib else str(job_id)
+        output_name = f"cert_{bib_part}_{ts}.mp4"
         output_path = os.path.join(OUTPUT_CERT_FOLDER, output_name)
 
         success = False
@@ -44,10 +48,10 @@ def run_cert_task(job_id: int, video_path: str, mode: str, event_config: dict):
                 sys.path.insert(0, VIDEO_EDITOR_PATH)
                 from src.running_pipeline import RunningPipeline
 
-                # date 자동 설정
+                # date 자동 설정 (KST 기준)
                 ec = dict(event_config)
                 if not ec.get("date"):
-                    ec["date"] = datetime.now().strftime("%Y.%m.%d")
+                    ec["date"] = datetime.now(KST).strftime("%Y.%m.%d")
 
                 orig = os.getcwd()
                 os.chdir(VIDEO_EDITOR_PATH)

@@ -1,14 +1,13 @@
 import os
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, AnalysisJob
 from core.schemas import AnalysisJobCreate, AnalysisJobResponse
 from core.security import get_current_user
-from core.utils import run_in_thread
 from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.analysis import run_analysis_task
 
@@ -18,7 +17,6 @@ router = APIRouter(prefix="/analysis-jobs", tags=["analysis"])
 @router.post("/", response_model=AnalysisJobResponse)
 async def create_analysis_job(
     body: AnalysisJobCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -35,7 +33,7 @@ async def create_analysis_job(
     s3_url = f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/videos/{video.filename}"
     local_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
     video_path = s3_url if AWS_BUCKET_NAME else local_path
-    background_tasks.add_task(run_in_thread, run_analysis_task, job.id, video_path)
+    run_analysis_task.delay(job.id, video_path)
     return job
 
 

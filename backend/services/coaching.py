@@ -8,11 +8,13 @@ from core.models import CoachingJob
 from core.config import (
     VIDEO_EDITOR_AVAILABLE, VIDEO_EDITOR_LOCK, VIDEO_EDITOR_PATH, OUTPUT_COACHING_FOLDER,
 )
+from core.celery_app import celery_app
 from services.opencv import create_coaching_video
 from services.video import upload_to_s3, download_from_s3_if_needed
 
 
-def run_coaching_task(job_id: int, video_path: str, coaching_text: str):
+@celery_app.task(name="coaching.run", bind=True, max_retries=2)
+def run_coaching_task(self, job_id: int, video_path: str, coaching_text: str):
     db = SessionLocal()
     tmp_path = None
     try:

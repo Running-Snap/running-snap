@@ -4,8 +4,10 @@ import shutil
 import subprocess
 from datetime import datetime
 
+from core.utils import KST
 
-def extract_frames(video_path: str, photo_count: int, output_dir: str) -> list:
+
+def extract_frames(video_path: str, photo_count: int, output_dir: str, user_id: int = 0, bib: str = "") -> list:
     """균등 간격으로 프레임을 추출해 JPEG 저장 후 결과 리스트 반환"""
     try:
         import cv2
@@ -35,7 +37,8 @@ def extract_frames(video_path: str, photo_count: int, output_dir: str) -> list:
     indices = [start + int(i * usable / (photo_count + 1)) for i in range(1, photo_count + 1)]
 
     os.makedirs(output_dir, exist_ok=True)
-    ts_prefix = datetime.now().strftime("%Y%m%d_%H%M%S")
+    ts_prefix = datetime.now(KST).strftime("%Y%m%d_%H%M%S")
+    bib_part = bib if bib else "0"
     photos = []
 
     for i, idx in enumerate(indices):
@@ -45,7 +48,7 @@ def extract_frames(video_path: str, photo_count: int, output_dir: str) -> list:
             continue
         ts_sec = idx / fps
         ts_str = f"{int(ts_sec // 60)}:{int(ts_sec % 60):02d}"
-        filename = f"bestcut_{ts_prefix}_{i+1}.jpg"
+        filename = f"bestcut_{user_id}_{bib_part}_{ts_prefix}_{i+1}.jpg"
         cv2.imwrite(os.path.join(output_dir, filename), frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
         photos.append({
             "photo_url":   f"/outputs/photos/{filename}",
@@ -113,10 +116,17 @@ def create_coaching_video(video_path: str, coaching_text: str, output_path: str)
 
     ffmpeg_bin = shutil.which("ffmpeg")
     try:
+        # h264_nvenc 시도 → 실패 시 libx264 fallback
         result = subprocess.run(
-            [ffmpeg_bin, "-y", "-i", tmp_path, "-vcodec", "libx264", "-an", "-movflags", "+faststart", output_path],
+            [ffmpeg_bin, "-y", "-i", tmp_path, "-vcodec", "h264_nvenc", "-an", "-movflags", "+faststart", output_path],
             capture_output=True, timeout=120,
         )
+        if result.returncode != 0:
+            print("[OPENCV][FFMPEG] nvenc 실패 → libx264 fallback")
+            result = subprocess.run(
+                [ffmpeg_bin, "-y", "-i", tmp_path, "-vcodec", "libx264", "-an", "-movflags", "+faststart", output_path],
+                capture_output=True, timeout=120,
+            )
         if result.returncode == 0 and os.path.exists(output_path):
             os.remove(tmp_path)
             return True

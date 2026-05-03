@@ -1,14 +1,13 @@
 import json
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, AnalysisJob, PoseVideoJob
 from core.schemas import PoseVideoJobCreate, PoseVideoJobResponse
 from core.security import get_current_user
-from core.utils import run_in_thread
 from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.pose_video import run_pose_video_task
 
@@ -18,7 +17,6 @@ router = APIRouter(prefix="/pose-video-jobs", tags=["pose-video"])
 @router.post("/", response_model=PoseVideoJobResponse)
 async def create_pose_video_job(
     body: PoseVideoJobCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -57,7 +55,7 @@ async def create_pose_video_job(
     db.commit()
     db.refresh(job)
 
-    background_tasks.add_task(run_in_thread, run_pose_video_task, job.id, video_path, feedback_data)
+    run_pose_video_task.delay(job.id, video_path, feedback_data)
     return job
 
 

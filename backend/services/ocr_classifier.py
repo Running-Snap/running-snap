@@ -17,7 +17,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-import threading
+from core.celery_app import celery_app
 from datetime import timedelta
 
 import boto3
@@ -33,8 +33,7 @@ from core.config import (
 
 log = logging.getLogger(__name__)
 
-# OCR 동시 실행 제한 (OOM 방지)
-_OCR_SEMAPHORE = threading.Semaphore(1)
+# OCR 동시 실행 제한은 Celery worker concurrency로 대체
 
 # 연속 클립 병합 허용 간격 (초) - 이전 클립 종료 후 이 시간 안에 다음 클립 시작이면 같은 러너로 판단
 MERGE_GAP_SEC = 30
@@ -80,21 +79,23 @@ def _upload_to_s3(local_path: str, s3_folder: str) -> str | None:
         return None
 
 
+def _run_ffmpeg_with_fallback(cmd_nvenc: list, cmd_cpu: list, timeout: int = 120) -> subprocess.CompletedProcess:
+    """h264_nvenc 시도 후 실패 시 libx264로 fallback."""
+    result = subprocess.run(cmd_nvenc, capture_output=True, timeout=timeout)
+    if result.returncode != 0:
+        print("[OCR][FFMPEG] nvenc 실패 → libx264 fallback")
+        result = subprocess.run(cmd_cpu, capture_output=True, timeout=timeout)
+    return result
+
+
 def _trim_video(input_path: str, output_path: str, start_sec: float, end_sec: float) -> bool:
     """ffmpeg으로 영상 구간 트림."""
     duration = max(1.0, end_sec - start_sec)
     try:
-        result = subprocess.run(
-            [
-                "ffmpeg", "-y",
-                "-ss", str(start_sec),
-                "-i", input_path,
-                "-t", str(duration),
-                "-c:v", "libx264", "-preset", "fast",
-                "-c:a", "aac",
-                output_path,
-            ],
-            capture_output=True,
+        base_args = ["ffmpeg", "-y", "-ss", str(start_sec), "-i", input_path, "-t", str(duration)]
+        result = _run_ffmpeg_with_fallback(
+            cmd_nvenc=base_args + ["-c:v", "h264_nvenc", "-preset", "fast", "-c:a", "aac", output_path],
+            cmd_cpu=base_args + ["-c:v", "libx264", "-preset", "fast", "-c:a", "aac", output_path],
             timeout=120,
         )
         ok = result.returncode == 0 and os.path.exists(output_path)
@@ -112,13 +113,15 @@ def _concat_videos(clip_paths: list[str], output_path: str) -> bool:
     """ffmpeg으로 여러 클립 순서대로 합치기."""
     try:
         n = len(clip_paths)
-        cmd = ["ffmpeg", "-y"]
+        base_cmd = ["ffmpeg", "-y"]
         for p in clip_paths:
-            cmd += ["-i", p]
+            base_cmd += ["-i", p]
         filter_str = "".join(f"[{i}:v]" for i in range(n)) + f"concat=n={n}:v=1[v]"
-        cmd += ["-filter_complex", filter_str, "-map", "[v]",
-                "-c:v", "libx264", "-preset", "fast", output_path]
-        result = subprocess.run(cmd, capture_output=True, timeout=180)
+        result = _run_ffmpeg_with_fallback(
+            cmd_nvenc=base_cmd + ["-filter_complex", filter_str, "-map", "[v]", "-c:v", "h264_nvenc", "-preset", "fast", output_path],
+            cmd_cpu=base_cmd + ["-filter_complex", filter_str, "-map", "[v]", "-c:v", "libx264", "-preset", "fast", output_path],
+            timeout=180,
+        )
         ok = result.returncode == 0 and os.path.exists(output_path)
         if ok:
             print(f"[OCR] 합치기 완료: {len(clip_paths)}개 → {os.path.basename(output_path)}")
@@ -141,8 +144,8 @@ def _run_ocr_on_file(local_path: str, clip_id: int) -> list[dict]:
             video_source=local_path,
             mode="file",
             output_dir=out_dir,
-            use_gpu_yolo=False,
-            use_gpu_ocr=False,
+            use_gpu_yolo=True,
+            use_gpu_ocr=True,
             ocr_backend="easyocr",
             ocr_interval_frames=5,
             ocr_min_confidence=0.25,
@@ -220,14 +223,16 @@ def _get_or_create_user(db, bib: str):
     return new_user
 
 
-def _find_prev_match(db, user_id: int, clip_end_time) -> object | None:
+def _find_prev_match(db, user_id: int, clip_start_time) -> object | None:
     """
-    같은 유저의 이전 ClipMatch 중 MERGE_GAP_SEC 이내에 끝난 것을 찾기.
-    연속 클립 병합 여부 판단에 사용.
+    같은 유저의 이전 ClipMatch 중 실제 촬영 시간 기준으로
+    현재 클립 시작 시간과 가장 가까운 것을 찾기.
+    업로드 순서와 무관하게 clip_start/clip_end 실제 시간 기준으로 병합.
     """
     from core.models import ClipMatch, CameraClip
 
-    cutoff = clip_end_time - timedelta(seconds=MERGE_GAP_SEC)
+    # 현재 클립 시작 시간보다 이전에 종료된 클립 중 MERGE_GAP_SEC 이내인 것
+    cutoff = clip_start_time - timedelta(seconds=MERGE_GAP_SEC)
     prev = (
         db.query(ClipMatch)
         .join(CameraClip, ClipMatch.clip_id == CameraClip.id)
@@ -235,9 +240,9 @@ def _find_prev_match(db, user_id: int, clip_end_time) -> object | None:
             ClipMatch.user_id == user_id,
             ClipMatch.status == "done",
             CameraClip.clip_end >= cutoff,
-            CameraClip.clip_end <= clip_end_time,
+            CameraClip.clip_end <= clip_start_time,  # 현재 클립 시작 전에 끝난 것
         )
-        .order_by(CameraClip.clip_end.desc())
+        .order_by(CameraClip.clip_end.desc())  # 가장 최근에 끝난 것
         .first()
     )
     return prev
@@ -318,10 +323,10 @@ def _create_clip_match(db, user_id: int, clip_id: int, s3_url: str,
     return True
 
 
-def run_ocr_matching(video_url: str, clip_id: int):
+@celery_app.task(name="ocr.run_matching", bind=True, max_retries=2)
+def run_ocr_matching(self, video_url: str, clip_id: int):
     """
     OCR 배번 인식 → 트림 → 연속 클립 병합 → 유저 매칭 메인 함수.
-    camera.py의 BackgroundTask에서 호출.
     """
     print(f"[OCR] 클립 {clip_id} 처리 시작")
 
@@ -329,11 +334,10 @@ def run_ocr_matching(video_url: str, clip_id: int):
         print(f"[OCR] 경고: OCR 모듈 없음 (ultralytics/easyocr 미설치)")
         return
 
-    print(f"[OCR] 클립 {clip_id}: 큐 대기 중...")
-    _OCR_SEMAPHORE.acquire()
     print(f"[OCR] 클립 {clip_id}: 처리 시작")
 
     work_dir = tempfile.mkdtemp(prefix="ocr_work_")
+    auto_process_tasks = []  # (user_id, final_url, camera_id, bib) 목록
     try:
         # 1. S3 다운로드
         local_path = _download_from_s3(video_url, work_dir)
@@ -345,7 +349,6 @@ def run_ocr_matching(video_url: str, clip_id: int):
 
         from core.database import SessionLocal
         from core.models import CameraClip
-        from services.matching import auto_process
 
         db = SessionLocal()
         try:
@@ -380,8 +383,9 @@ def run_ocr_matching(video_url: str, clip_id: int):
                     detected.status = "matched"
                     db.commit()
                     print(f"[OCR] 배번 {bib} → 유저 {user.username} 매칭 완료")
-                    # 7. 분석/베스트컷/숏폼 자동 실행
-                    auto_process(user.id, final_url)
+                    # auto_process Celery 큐 등록
+                    camera_id = clip.camera_id if clip else "cam1"
+                    auto_process_tasks.append((user.id, final_url, camera_id, bib))
 
         finally:
             db.close()
@@ -391,9 +395,14 @@ def run_ocr_matching(video_url: str, clip_id: int):
         import traceback
         traceback.print_exc()
     finally:
-        _OCR_SEMAPHORE.release()
         shutil.rmtree(work_dir, ignore_errors=True)
-        print(f"[OCR] 클립 {clip_id}: 완료")
+        print(f"[OCR] 클립 {clip_id}: OCR 완료, auto_process {len(auto_process_tasks)}개 큐 등록")
+
+    # auto_process를 Celery 큐로 등록
+    from services.matching import auto_process
+    for user_id, final_url, camera_id, bib in auto_process_tasks:
+        auto_process.delay(user_id, final_url, camera_id, bib)
+        print(f"[OCR] 클립 {clip_id}: auto_process 큐 등록 (user_id={user_id}, camera_id={camera_id}, bib={bib})")
 
 
 def reassign_clip(clip_id: int, new_bib: str, detected_bib_id: int | None = None):
@@ -427,8 +436,9 @@ def reassign_clip(clip_id: int, new_bib: str, detected_bib_id: int | None = None
         _create_clip_match(db, user.id, clip_id, s3_url,
                            enter_time=clip.clip_start, exit_time=clip.clip_end)
 
+        camera_id = clip.camera_id if clip else "cam1"
         print(f"[ADMIN] 클립 {clip_id} → 배번 {new_bib}(유저 {user.username}) 재배정 완료")
-        auto_process(user.id, s3_url)
+        auto_process(user.id, s3_url, camera_id=camera_id, bib=new_bib)
         return {"ok": True, "user_id": user.id, "username": user.username}
 
     except Exception as e:

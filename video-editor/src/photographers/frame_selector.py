@@ -365,7 +365,7 @@ class FrameSelector:
         if subject_pos and subject_pos.confidence > 0.3:
             # 피사체 기반 크롭
             reframed = self._reframer.reframe_image(
-                frame, output_config.ratio, subject_pos
+                frame, output_config.ratio, (subject_pos.x, subject_pos.y)
             )
         else:
             # 피사체 없으면 중앙 크롭
