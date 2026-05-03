@@ -15,19 +15,16 @@ import {
   apiListAnalysisJobs,
   apiListShortformJobs,
   apiListBestcutJobs,
+  apiListCertJobs,      
   AnalysisJob,
   ShortformJob,
   BestcutJob,
-<<<<<<< HEAD
+  CertJob,              
   formatKoreanDateTime,
-=======
-  formatKoreanTime,
-  API_BASE,
->>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
 } from '@/constants/api';
 
 // 홈 상단 하이라이트 카드에서 사용할 컨텐츠 타입
-type HighlightType = 'BEST_CUT' | 'SHORTFORM' | 'ANALYSIS';
+type HighlightType = 'BEST_CUT' | 'SHORTFORM' | 'ANALYSIS' | 'CERT';
 
 interface HomeHighlightItem {
   id: string;              // job id를 문자열로
@@ -43,12 +40,14 @@ const HIGHLIGHT_TYPE_LABEL: Record<HighlightType, string> = {
   BEST_CUT: '베스트 컷',
   SHORTFORM: '숏폼',
   ANALYSIS: '자세 피드백',
+  CERT: '인증영상',
 };
 
 const HIGHLIGHT_TYPE_COLOR: Record<HighlightType, string> = {
   BEST_CUT: '#FF9500',
   SHORTFORM: '#FF3B30',
   ANALYSIS: '#007AFF',
+  CERT: '#34C759',
 };
 
 export default function HomeScreen() {
@@ -62,16 +61,18 @@ export default function HomeScreen() {
       try {
         setLoadError(null);
         // 세 종류 기록을 동시에 요청
-        const [analysisJobs, shortformJobs, bestcutJobs] = await Promise.all([
+        const [analysisJobs, shortformJobs, bestcutJobs, certJobs] = await Promise.all([
           apiListAnalysisJobs(),
           apiListShortformJobs(),
           apiListBestcutJobs(),
+          apiListCertJobs(),
         ]);
 
         // 1) status === 'done'만 필터링
         const doneAnalysis = analysisJobs.filter((j) => j.status === 'done');
         const doneShortforms = shortformJobs.filter((j) => j.status === 'done');
         const doneBestcuts = bestcutJobs.filter((j) => j.status === 'done');
+        const doneCerts = certJobs.filter((j) => j.status === 'done');
 
         // 2) 각각을 HomeHighlightItem으로 매핑
         const analysisItems: HomeHighlightItem[] = doneAnalysis.map(
@@ -96,7 +97,6 @@ const shortformItems: HomeHighlightItem[] = doneShortforms.map(
   }),
 );
 
-<<<<<<< HEAD
 const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
   (job: BestcutJob): HomeHighlightItem => ({
     id: `bestcut-${job.id}`,
@@ -107,37 +107,22 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
     createdAt: formatKoreanDateTime(job.created_at),
   }),
 );
-=======
-        const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
-          (job: BestcutJob): HomeHighlightItem => {
-            let thumbnailUrl = '';
-            try {
-              if (job.result_json) {
-                const cuts = JSON.parse(job.result_json) as { photo_url: string | null }[];
-                const first = cuts.find(c => c.photo_url);
-                if (first?.photo_url) {
-                  thumbnailUrl = first.photo_url.startsWith('http')
-                    ? first.photo_url
-                    : `${API_BASE}${first.photo_url}`;
-                }
-              }
-            } catch {}
-            return {
-              id: `bestcut-${job.id}`,
-              type: 'BEST_CUT',
-              thumbnailUrl,
-              title: '베스트 컷 결과',
-              createdAt: formatKoreanTime(job.created_at),
-            };
-          },
-        );
->>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
-
+const certItems: HomeHighlightItem[] = doneCerts.map(
+  (job: CertJob): HomeHighlightItem => ({
+    id: `cert-${job.id}`,
+    jobId: job.id,
+    type: 'CERT',
+    thumbnailUrl: '',
+    title: job.mode === 'full' ? '풀 인증영상' : '인증영상',
+    createdAt: formatKoreanDateTime(job.created_at),
+  }),
+);
         // 3) 하나의 배열로 합치고, 최신 순으로 정렬
         const merged = [
           ...analysisItems,
           ...shortformItems,
           ...bestcutItems,
+          ...certItems, 
         ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
         // 4) 너무 많으면 상위 N개만 (예: 10개)
@@ -156,7 +141,6 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
 
   // 하이라이트 카드 탭 시 상세 화면으로 이동하는 핸들러
   const handlePressHighlight = (item: HomeHighlightItem) => {
-<<<<<<< HEAD
   if (item.type === 'BEST_CUT') {
     router.push({
       pathname: '/best-cut-result',
@@ -167,30 +151,17 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
       pathname: '/shortform-result',
       params: { jobId: String(item.jobId) },
     });
+  } else if (item.type === 'CERT') {                             
+    router.push({ 
+      pathname: '/cert-result', 
+      params: { jobId: String(item.jobId) } });
   } else {
     router.push({
       pathname: '/analysis-result',
       params: { jobId: String(item.jobId) },
     });
-  }
+  } 
 };
-=======
-    // TODO: 추후 type별로 다른 상세 화면으로 route 분기
-    // 예시:
-    // if (item.type === 'BEST_CUT') router.push(`/best-cut-result?id=${item.id}`);
-    // 지금은 일단 베스트컷 히스토리로 이동
-    if (item.type === 'BEST_CUT') {
-      const jobId = item.id.replace('bestcut-', '');
-      router.push(`/best-cut-result?jobId=${jobId}`);
-    } else if (item.type === 'SHORTFORM') {
-      const jobId = item.id.replace('shortform-', '');
-      router.push(`/shortform-result?jobId=${jobId}`);
-    } else {
-      const jobId = item.id.replace('analysis-', '');
-      router.push(`/analysis-result?jobId=${jobId}`);
-    }
-  };
->>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
 
   // 상단 캐러셀 카드 UI
   const renderHighlightItem = ({ item }: { item: HomeHighlightItem }) => (
@@ -214,7 +185,7 @@ const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
         ]}
       >
         <Text style={styles.highlightFallbackIcon}>
-          {item.type === 'BEST_CUT' ? '📸' : item.type === 'SHORTFORM' ? '🎬' : '🏃'}
+          {item.type === 'BEST_CUT' ? '📸' : item.type === 'SHORTFORM' ? '🎬': item.type === 'CERT' ? '🏅' : '🏃'}
         </Text>
         <Text style={[styles.highlightFallbackLabel, { color: HIGHLIGHT_TYPE_COLOR[item.type] }]}>
           {HIGHLIGHT_TYPE_LABEL[item.type]}

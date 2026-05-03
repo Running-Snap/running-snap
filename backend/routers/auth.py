@@ -18,6 +18,9 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+# ✅ 새로 추가: 배번호 로그인 요청 스키마
+class BibLoginRequest(BaseModel):
+    bib_number: str  # 숫자 문자열 (예: "1042")
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -63,3 +66,29 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+# ─── ✅ 새로 추가: 배번호 로그인 ────────────────────────────
+
+@router.post("/bib-login", response_model=Token)
+async def bib_login(req: BibLoginRequest, db: Session = Depends(get_db)):
+    # 입력값 검증: 숫자만 허용
+    if not req.bib_number.strip().isdigit():
+        raise HTTPException(status_code=400, detail="배번호는 숫자만 입력해주세요")
+
+    bib = req.bib_number.strip()
+
+    # 배번호로 기존 유저 조회
+    user = db.query(User).filter(User.bib_number == bib).first()
+
+    # 등록된 배번호만 허용
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="등록되지 않은 배번호입니다. 대회 운영진에게 문의해주세요."
+        )
+
+    token = create_access_token(
+        {"sub": user.username},
+        timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": token, "token_type": "bearer"}

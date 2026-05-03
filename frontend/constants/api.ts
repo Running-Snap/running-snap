@@ -4,11 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─────────────────────────────────────────
 // API 기본 URL 설정
 // ─────────────────────────────────────────
-<<<<<<< HEAD
 export const API_BASE = 'https://d3b45n8fzgmww3.cloudfront.net';
-=======
-export const API_BASE = 'http://13.125.106.167:8000';
->>>>>>> 90db6f31841991bfe6e6b732c701dd9ddb82b8cf
 
 // ─────────────────────────────────────────
 // 인증 토큰 저장 (AsyncStorage → 앱 재시작 후에도 유지)
@@ -78,6 +74,20 @@ function authHeaders(): Record<string, string> {
 // ─────────────────────────────────────────
 // 인증
 // ─────────────────────────────────────────
+// ✅ 새로 추가: 배번호 로그인
+export async function apiLoginWithBib(bibNumber: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/auth/login-json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: bibNumber, password: bibNumber }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { detail?: string };
+    throw new Error(err.detail ?? '등록되지 않은 배번호입니다');
+  }
+  const data = await res.json() as { access_token: string };
+  return data.access_token;
+}
 export async function apiLogin(email: string, password: string): Promise<string> {
   const res = await fetch(`${API_BASE}/auth/login-json`, {
     method: 'POST',
@@ -104,12 +114,17 @@ export async function apiRegister(username: string, email: string, password: str
   }
 }
 
-export async function apiGetMe(): Promise<{ id: number; username: string; email: string; created_at: string }> {
+export async function apiGetMe(): Promise<{
+  id: number;
+  username: string;
+  email: string | null;
+  bib_number: string | null;  // ← 추가
+  created_at: string;
+}> {
   const res = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders() });
   if (!res.ok) throw new Error('사용자 정보 조회 실패');
   return res.json();
 }
-
 // ─────────────────────────────────────────
 // 영상 업로드 (웹 + 네이티브 모두 지원)
 // 웹: blob URI → fetch → File 객체 → FormData
@@ -372,4 +387,27 @@ export async function pollUntilDone<T extends { status: string }>(
     if (Date.now() > deadline) throw new Error('시간 초과 (5분)');
     await new Promise(r => setTimeout(r, intervalMs));
   }
+}
+// ─────────────────────────────────────────
+// 인증영상 작업
+// ─────────────────────────────────────────
+export type CertJob = {
+  id: number;
+  video_id: number;
+  mode: string;
+  status: string;
+  output_filename: string | null;
+  created_at: string;
+};
+
+export async function apiListCertJobs(): Promise<CertJob[]> {
+  const res = await fetch(`${API_BASE}/cert-jobs/`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('인증영상 기록 조회 실패');
+  return res.json();
+}
+
+export async function apiGetCertJob(jobId: number): Promise<CertJob> {
+  const res = await fetch(`${API_BASE}/cert-jobs/${jobId}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('인증영상 작업 조회 실패');
+  return res.json();
 }

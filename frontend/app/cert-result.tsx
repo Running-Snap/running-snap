@@ -6,32 +6,22 @@ import {
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
-import { apiGetShortformJob, API_BASE } from '@/constants/api';
+import { apiGetCertJob, API_BASE } from '@/constants/api';
 
-const STYLE_LABELS: Record<string, string> = {
-  action: '스포츠 액션샷',
-  instagram: '인스타그램',
-  tiktok: '틱톡',
-  humor: '밈/유머',
-  documentary: '다큐',
-};
-
-export default function ShortformResultScreen() {
+export default function CertResultScreen() {
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const [outputFilename, setOutputFilename] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState('');
-  const [style, setStyle] = useState('');
-  const [durationSec, setDurationSec] = useState(0);
+  const [mode, setMode] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [actualDuration, setActualDuration] = useState<number | null>(null);
 
   useEffect(() => {
     if (!jobId) return;
-    apiGetShortformJob(Number(jobId))
+    apiGetCertJob(Number(jobId))
       .then(job => {
         setOutputFilename(job.output_filename);
-        setStyle(job.style);
-        setDurationSec(job.duration_sec);
+        setMode(job.mode);
         setCreatedAt(job.created_at ? new Date(job.created_at).toLocaleDateString('ko-KR') : '');
       })
       .catch(() => {})
@@ -55,7 +45,7 @@ export default function ShortformResultScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF3B30" />
+        <ActivityIndicator size="large" color="#34C759" />
         <Text style={styles.loadingText}>결과 불러오는 중...</Text>
       </View>
     );
@@ -67,14 +57,14 @@ export default function ShortformResultScreen() {
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}>
           <Text style={styles.backButton}>← 뒤로</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>숏폼 완성!</Text>
+        <Text style={styles.title}>인증영상 완성!</Text>
       </View>
 
       <View style={styles.successCard}>
-        <Text style={styles.successIcon}>🎉</Text>
-        <Text style={styles.successTitle}>숏폼이 완성되었어요!</Text>
+        <Text style={styles.successIcon}>🏅</Text>
+        <Text style={styles.successTitle}>인증영상이 완성되었어요!</Text>
         <Text style={styles.successSubtitle}>
-          AI가 당신의 러닝 하이라이트를 멋지게 편집했어요
+          마라톤 완주 기록을 멋진 영상으로 담았어요
         </Text>
       </View>
 
@@ -88,22 +78,16 @@ export default function ShortformResultScreen() {
         <Text style={styles.sectionTitle}>영상 정보</Text>
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>스타일</Text>
-            <Text style={styles.infoValue}>{STYLE_LABELS[style] ?? style}</Text>
+            <Text style={styles.infoLabel}>모드</Text>
+            <Text style={styles.infoValue}>{mode === 'full' ? '풀 버전' : '심플 버전'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>영상 길이</Text>
-            <Text style={styles.infoValue}>{actualDuration != null ? `${actualDuration}초` : `${durationSec}초`}</Text>
+            <Text style={styles.infoValue}>{actualDuration != null ? `${actualDuration}초` : '-'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>생성 날짜</Text>
             <Text style={styles.infoValue}>{createdAt}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>파일</Text>
-            <Text style={styles.infoValue} numberOfLines={1}>
-              {outputFilename ?? '생성 중...'}
-            </Text>
           </View>
         </View>
       </View>

@@ -27,6 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="best-cut-result" options={{ headerShown: false }} />
         <Stack.Screen name="best-cut-history" options={{ headerShown: false }} />
         <Stack.Screen name="coaching-result" options={{ headerShown: false }} />
+        <Stack.Screen name="cert-result" options={{ headerShown: false }} />
         <Stack.Screen name="my-clips" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

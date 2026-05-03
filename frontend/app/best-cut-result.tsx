@@ -29,12 +29,13 @@ export default function BestCutResultScreen() {
   if (!jobId) return;
   apiGetBestcutJob(Number(jobId))
     .then(job => {
-      console.log('BESTCUT JOB RESULT_JSON:', job.result_json); // ← 추가
-
       if (job.result_json) {
-        const cuts = JSON.parse(job.result_json) as BestCut[];
-        console.log('PARSED CUTS:', cuts);                      // ← 이것도 추가
-        setCuts(cuts);
+        const parsed = JSON.parse(job.result_json);
+        // ✅ { bestcut: [...], poster: [...] } 구조 대응
+        const cutsArray = Array.isArray(parsed)
+          ? parsed
+          : parsed.bestcut ?? [];
+        setCuts(cutsArray);
       }
     })
     .catch(() => {})
