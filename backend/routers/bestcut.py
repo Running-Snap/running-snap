@@ -2,14 +2,13 @@ import json
 import os
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, BestCutJob
 from core.schemas import BestCutJobCreate, BestCutJobResponse
 from core.security import get_current_user
-from core.utils import run_in_thread
 from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.bestcut import run_bestcut_task
 
@@ -19,7 +18,6 @@ router = APIRouter(prefix="/bestcut-jobs", tags=["bestcut"])
 @router.post("/", response_model=BestCutJobResponse)
 async def create_bestcut_job(
     body: BestCutJobCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -57,7 +55,7 @@ async def create_bestcut_job(
         "pace":         body.poster_pace,
         "color_scheme": body.poster_color_scheme,
     }
-    background_tasks.add_task(run_in_thread, run_bestcut_task, job.id, video_paths, body.photo_count, poster_config)
+    run_bestcut_task.delay(job.id, video_paths, body.photo_count, poster_config)
     return job
 
 

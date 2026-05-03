@@ -66,6 +66,7 @@ class CameraClip(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     filename = Column(String, unique=True)        # 저장된 파일명
     s3_url = Column(String, nullable=True)        # S3 업로드 URL
+    camera_id = Column(String, nullable=True)     # 카메라 식별자 (예: "cam1", "cam2")
     clip_start = Column(DateTime)                # 클립 시작 시각 (UTC)
     clip_end = Column(DateTime)                  # 클립 종료 시각 (UTC)
     created_at = Column(DateTime, default=datetime.utcnow)

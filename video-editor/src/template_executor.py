@@ -23,6 +23,7 @@ searchingmodule EditorAdapter (방법 B) 연결용:
 import json
 import subprocess
 import tempfile
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import numpy as np
@@ -414,6 +415,15 @@ class TemplateExecutor:
     _HN_MEDIUM         = 10
     _HN_THIN           = 12
     _KO  = "/System/Library/Fonts/AppleSDGothicNeo.ttc"   # 한글 메인 (6굵기)
+    # Ubuntu 나눔 폰트 경로 (weight별)
+    _KO_NANUM = {
+        "bold":    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "semibold":"/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "medium":  "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "regular": "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "light":   "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "thin":    "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+    }
     # index: 0=Regular 2=Medium 4=SemiBold 6=Bold 8=Light 10=Thin
     _KO_IDX = {
         "thin":     10,
@@ -622,7 +632,13 @@ class TemplateExecutor:
             key = "thin"
         idx = self._KO_IDX[key]
         try:
-            return ImageFont.truetype(self._KO, size, index=idx)
+            if os.path.exists(self._KO):
+                return ImageFont.truetype(self._KO, size, index=idx)
+            # Ubuntu: weight별 nanum ttf 파일 사용
+            nanum_path = self._KO_NANUM.get(key, self._KO_NANUM["regular"])
+            if os.path.exists(nanum_path):
+                return ImageFont.truetype(nanum_path, size)
+            return ImageFont.load_default()
         except Exception:
             return ImageFont.load_default()
 
@@ -671,6 +687,15 @@ class TemplateExecutor:
         for i in [idx, self._HN_BOLD, 0]:
             try:
                 return ImageFont.truetype(self._HN, size, index=i)
+            except Exception:
+                pass
+
+        # Ubuntu DejaVu fallback
+        _dejavu_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        _dejavu = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        for path in [_dejavu_bold, _dejavu]:
+            try:
+                return ImageFont.truetype(path, size)
             except Exception:
                 pass
 

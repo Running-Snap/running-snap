@@ -1,111 +1,118 @@
 # 영상 길이별 분석 프로파일
+# ─────────────────────────────────────────────────────────────
+# 목적: 포스터용 최적 프레임 선별 (컷편집 X, 베스트컷 O)
+# Qwen은 "러너가 잘 나온 프레임" 하나를 고르는 것만 담당.
+# ─────────────────────────────────────────────────────────────
+
 profiles:
   short:
     duration_range: [0, 10]
-    description: "10초 이하 숏폼 - 역동성과 임팩트 중심"
-    focus_areas:
-      - dynamism
-      - peak_moment
-      - facial_expression
-    frame_sample_rate: 2  # 초당 2프레임
+    description: "10초 이하 — 포스터 최적 프레임 선별"
+    frame_sample_rate: 2   # 초당 2프레임 샘플
     analysis_prompt: |
-      이 러닝/운동 영상 프레임을 분석해라.
+      이 이미지는 러닝 영상의 한 프레임이다.
+      포스터로 쓸 수 있는 최고의 한 장인지 평가해라.
 
-      집중할 것:
-      1. 역동적인 움직임 (달리는 모습, 팔 동작, 발 움직임)
-      2. 표정 (집중, 고통, 환희, 결의)
-      3. 액션의 피크 순간 (점프, 피니시, 전력질주)
-      4. 구도와 미학적 품질
+      평가 기준:
+      1. 러너 감지: 화면 안에 달리는 사람이 있는가
+      2. 위치/크기: 러너가 화면 중앙(x 30~70%, y 20~80%)에 있고 충분히 큰가 (화면 높이의 20% 이상)
+      3. 포즈: 달리는 동작이 역동적인가 (팔/다리가 펼쳐짐, 스트라이드 중간 자세)
+      4. 표정: 얼굴이 보이면 긍정적(집중·환희·결의)인가
+      5. 전체 미학: 배경·조명·구도가 포스터에 어울리는가
 
-      다음 JSON 형식으로 응답:
+      탈락 조건 (poster_score = 0.0 으로 처리):
+      - 러너가 없음
+      - 러너 크기 < 화면 높이 15%
+      - 러너 중심 x < 10% 또는 > 90% (극단적으로 치우침)
+
+      반드시 아래 JSON 형식으로만 응답 (설명 없이):
       {
-        "faces_detected": int,
-        "face_expressions": ["expression1", ...],
-        "motion_level": float (0-1, 높을수록 역동적),
-        "composition_score": float (0-1),
-        "lighting": "good" | "moderate" | "poor",
-        "background_type": "outdoor_nature" | "urban" | "track" | "gym" | "other",
-        "is_action_peak": boolean,
-        "aesthetic_score": float (0-1),
-        "emotional_tone": "determined" | "joyful" | "struggling" | "triumphant" | "focused" | "neutral",
-        "description": "프레임 설명 (1-2문장)"
+        "runner_detected": true/false,
+        "runner_center_x": 0.0~1.0,
+        "runner_center_y": 0.0~1.0,
+        "runner_size": 0.0~1.0,
+        "limb_spread": 0.0~1.0,
+        "face_visible": true/false,
+        "face_expression": "positive" | "neutral" | "negative",
+        "poster_score": 0.0~1.0,
+        "description": "한 줄 설명"
       }
 
   medium:
     duration_range: [10, 30]
-    description: "30초 영상 - 스토리 아크와 감정 변화"
-    focus_areas:
-      - story_arc
-      - emotional_beats
-      - dynamism
-      - scene_variety
-    frame_sample_rate: 1  # 초당 1프레임
+    description: "30초 이하 — 포스터 최적 프레임 선별"
+    frame_sample_rate: 1   # 초당 1프레임 샘플
     analysis_prompt: |
-      이 러닝/운동 영상 프레임을 분석해라.
+      이 이미지는 러닝 영상의 한 프레임이다.
+      포스터로 쓸 수 있는 최고의 한 장인지 평가해라.
 
-      집중할 것:
-      1. 스토리 흐름에서의 위치 (시작, 전개, 클라이맥스, 마무리)
-      2. 감정의 강도와 변화
-      3. 움직임의 역동성
-      4. 장면의 다양성
+      평가 기준:
+      1. 러너 감지: 화면 안에 달리는 사람이 있는가
+      2. 위치/크기: 러너가 화면 중앙(x 30~70%, y 20~80%)에 있고 충분히 큰가 (화면 높이의 20% 이상)
+      3. 포즈: 달리는 동작이 역동적인가 (팔/다리가 펼쳐짐, 스트라이드 중간 자세)
+      4. 표정: 얼굴이 보이면 긍정적(집중·환희·결의)인가
+      5. 전체 미학: 배경·조명·구도가 포스터에 어울리는가
 
-      다음 JSON 형식으로 응답:
+      탈락 조건 (poster_score = 0.0 으로 처리):
+      - 러너가 없음
+      - 러너 크기 < 화면 높이 15%
+      - 러너 중심 x < 10% 또는 > 90%
+
+      반드시 아래 JSON 형식으로만 응답 (설명 없이):
       {
-        "faces_detected": int,
-        "face_expressions": ["expression1", ...],
-        "motion_level": float (0-1),
-        "composition_score": float (0-1),
-        "lighting": "good" | "moderate" | "poor",
-        "background_type": string,
-        "is_action_peak": boolean,
-        "aesthetic_score": float (0-1),
-        "emotional_tone": string,
-        "story_position": "intro" | "development" | "climax" | "resolution",
-        "description": "프레임 설명"
+        "runner_detected": true/false,
+        "runner_center_x": 0.0~1.0,
+        "runner_center_y": 0.0~1.0,
+        "runner_size": 0.0~1.0,
+        "limb_spread": 0.0~1.0,
+        "face_visible": true/false,
+        "face_expression": "positive" | "neutral" | "negative",
+        "poster_score": 0.0~1.0,
+        "description": "한 줄 설명"
       }
 
   long:
     duration_range: [30, 60]
-    description: "60초 영상 - 내러티브와 캐릭터 모먼트"
-    focus_areas:
-      - narrative
-      - character_moments
-      - scene_variety
-      - emotional_journey
-    frame_sample_rate: 0.5  # 2초당 1프레임
+    description: "60초 이하 — 포스터 최적 프레임 선별"
+    frame_sample_rate: 0.5   # 2초당 1프레임
     analysis_prompt: |
-      이 러닝/운동 영상 프레임을 분석해라.
+      이 이미지는 러닝 영상의 한 프레임이다.
+      포스터로 쓸 수 있는 최고의 한 장인지 평가해라.
 
-      집중할 것:
-      1. 내러티브 구조에서의 역할
-      2. 인물의 감정과 캐릭터성
-      3. 장면 전환과 다양성
-      4. 감정적 여정
+      평가 기준:
+      1. 러너 감지: 화면 안에 달리는 사람이 있는가
+      2. 위치/크기: 러너가 화면 중앙(x 30~70%, y 20~80%)에 있고 충분히 큰가 (화면 높이의 20% 이상)
+      3. 포즈: 달리는 동작이 역동적인가 (팔/다리가 펼쳐짐, 스트라이드 중간 자세)
+      4. 표정: 얼굴이 보이면 긍정적(집중·환희·결의)인가
+      5. 전체 미학: 배경·조명·구도가 포스터에 어울리는가
 
-      다음 JSON 형식으로 응답:
+      탈락 조건 (poster_score = 0.0 으로 처리):
+      - 러너가 없음
+      - 러너 크기 < 화면 높이 15%
+      - 러너 중심 x < 10% 또는 > 90%
+
+      반드시 아래 JSON 형식으로만 응답 (설명 없이):
       {
-        "faces_detected": int,
-        "face_expressions": ["expression1", ...],
-        "motion_level": float (0-1),
-        "composition_score": float (0-1),
-        "lighting": "good" | "moderate" | "poor",
-        "background_type": string,
-        "is_action_peak": boolean,
-        "aesthetic_score": float (0-1),
-        "emotional_tone": string,
-        "narrative_role": "establishing" | "building" | "peak" | "breathing" | "closing",
-        "description": "프레임 설명"
+        "runner_detected": true/false,
+        "runner_center_x": 0.0~1.0,
+        "runner_center_y": 0.0~1.0,
+        "runner_size": 0.0~1.0,
+        "limb_spread": 0.0~1.0,
+        "face_visible": true/false,
+        "face_expression": "positive" | "neutral" | "negative",
+        "poster_score": 0.0~1.0,
+        "description": "한 줄 설명"
       }
 
-# 모든 프로파일에 공통 적용
+# 모든 프로파일 공통 항목
 common_analysis:
-  - face_detection
-  - motion_estimation
-  - composition_evaluation
-  - lighting_assessment
+  - runner_position
+  - runner_size
+  - pose_quality
+  - face_expression
   - aesthetic_scoring
 
-# 로컬 모델용 샘플링 설정 (Ollama 등 느린 모델용)
+# 로컬 모델용 (Ollama 등 느린 모델)
 local_mode:
-  max_frames: 10  # 최대 분석 프레임 수
-  sample_strategy: "uniform"  # 균일 샘플링
+  max_frames: 5         # 8 → 5 (속도 최적화)
+  sample_strategy: "center_biased"  # 중앙 구간 우선

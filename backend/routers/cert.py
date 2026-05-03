@@ -2,14 +2,13 @@ import json
 import os
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, CertJob
 from core.schemas import CertJobCreate, CertJobResponse
 from core.security import get_current_user
-from core.utils import run_in_thread
 from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.cert import run_cert_task
 
@@ -19,7 +18,6 @@ router = APIRouter(prefix="/cert-jobs", tags=["cert"])
 @router.post("/", response_model=CertJobResponse)
 async def create_cert_job(
     body: CertJobCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -35,6 +33,7 @@ async def create_cert_job(
     event_config = {
         "title":          body.title,
         "location":       body.location,
+        "date":           body.date,             # 비어있으면 cert.py에서 오늘 날짜 자동 설정
         "distance_km":    body.distance_km,
         "run_time":       body.run_time,
         "pace":           body.pace,
@@ -57,13 +56,18 @@ async def create_cert_job(
     db.refresh(job)
 
     if AWS_BUCKET_NAME:
-        video_path = f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/videos/{video.filename}"
+        # trimmed clip은 trimmed_clips/, 수동 업로드는 videos/ 폴더 사용
+        if video.filename.startswith("trim_"):
+            s3_folder = "trimmed_clips"
+        else:
+            s3_folder = "videos"
+        video_path = f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{s3_folder}/{video.filename}"
     else:
         video_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
 
-    background_tasks.add_task(
-        run_in_thread, run_cert_task,
+    run_cert_task.delay(
         job.id, video_path, body.mode, event_config,
+        current_user.bib_number or "",
     )
     return job
 

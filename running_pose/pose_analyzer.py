@@ -195,7 +195,6 @@ def compute_stats(frame_csv: str, event_csv: str) -> dict:
     elbow_angle_avg = float(np.mean(elbow_angles)) if elbow_angles else 0.0
     v_oscillation = float(df_frame["lm00_y_px"].max() - df_frame["lm00_y_px"].min())
 
-    # 착지 이벤트가 없는 경우 기본값 반환
     if len(df_event) == 0:
         return {
             "cadence": 0.0,
@@ -209,7 +208,6 @@ def compute_stats(frame_csv: str, event_csv: str) -> dict:
     cadence = (len(df_event) / duration) * 60.0 if duration > 0 else 0.0
     avg_impact_z = float(df_event["impact_z"].mean())
 
-    # 홀수/짝수 인덱스를 좌/우 발로 구분해 비대칭 계산
     left_z = df_event.iloc[0::2]["impact_z"]
     right_z = df_event.iloc[1::2]["impact_z"]
     if avg_impact_z > 0 and len(left_z) > 0 and len(right_z) > 0:
@@ -301,37 +299,26 @@ def _stats_to_feedbacks(stats: dict) -> list:
     return feedbacks
 
 
-# ── Step 4. Gemini API 코칭 리포트 생성 ───────────────────────────────
+# ── Step 4. Gemini API 코칭 리포트 생성 ─────────────────────────────────
 
 def generate_coaching_report(stats: dict, api_key: str) -> str:
     from google import genai as google_genai
 
     client = google_genai.Client(api_key=api_key)
 
-    prompt = f"""
-당신은 데이터 기반의 생체역학 마라톤 코치입니다.
-분석된 지표를 바탕으로 러너의 마라톤 완주 가능성과 자세 결함을 분석하십시오.
+    prompt = f"""당신은 데이터 기반의 생체역학 마라톤 코치입니다.
+아래 러너의 데이터를 분석하고 맞춤형 코칭 리포트를 작성해 주세요.
 
-[데이터 지표]
-- 평균 케이던스: {stats['cadence']} SPM
-- 수직 진폭(상하 출렁임): {stats['v_oscillation']} px
-- 평균 오버스트라이드(Impact Z): {stats['avg_impact_z']} (0.2 미만 권장)
-- 좌우 착지 비대칭률: {stats['asymmetry']}%
+[생체역학 지표]
+- 케이던스: {stats['cadence']} SPM
+- 수직 진동: {stats['v_oscillation']} px
+- 평균 착지 Impact Z: {stats['avg_impact_z']} (0.2 미만 권장)
+- 좌우 비대칭: {stats['asymmetry']}%
 - 평균 팔꿈치 각도: {stats['elbow_angle']}도
 
-[분석 필수 포인트]
-1. 팔꿈치-케이던스 협응 분석
-2. 오버스트라이드(Impact Z) 진단
-3. 수직 진폭과 에너지 효율 관계
-4. 비대칭 경고 및 부상 시나리오
-5. 풀코스 완주를 위한 가장 치명적인 포인트 1가지 교정 제언
-
-[출력 스타일]
-- 냉철한 데이터 분석 후 따뜻한 코칭으로 마무리.
-- 불필요한 서론 없이 즉시 리포트 시작.
-"""
+위 데이터를 기반으로 개선점과 코칭 조언을 제공하세요."""
     response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    return response.text
+    return response.text if hasattr(response, "text") else str(response)
 
 
 # ── 공개 인터페이스 — main.py에서 이것만 호출 ────────────────────────
@@ -352,6 +339,7 @@ def analyze_video(video_path: str, work_dir: str, model_path: str, gemini_api_ke
             "feedbacks": [...],
             "pose_stats": {...},
             "coaching_report": str,
+            "impact_events": [...],
         }
     """
     frame_csv, event_csv = extract_pose_csv(video_path, work_dir, model_path)
@@ -364,9 +352,17 @@ def analyze_video(video_path: str, work_dir: str, model_path: str, gemini_api_ke
         except Exception as e:
             coaching_report = f"Gemini API 호출 실패: {e}"
 
+    impact_events = []
+    try:
+        df_event = pd.read_csv(event_csv)
+        impact_events = df_event.to_dict("records")
+    except Exception:
+        impact_events = []
+
     return {
         "score": _stats_to_score(stats),
         "feedbacks": _stats_to_feedbacks(stats),
         "pose_stats": stats,
         "coaching_report": coaching_report,
+        "impact_events": impact_events,
     }

@@ -19,6 +19,7 @@ import {
   ShortformJob,
   BestcutJob,
   formatKoreanTime,
+  API_BASE,
 } from '@/constants/api';
 
 // 홈 상단 하이라이트 카드에서 사용할 컨텐츠 타입
@@ -93,14 +94,27 @@ export default function HomeScreen() {
         );
 
         const bestcutItems: HomeHighlightItem[] = doneBestcuts.map(
-          (job: BestcutJob): HomeHighlightItem => ({
-            id: `bestcut-${job.id}`,
-            type: 'BEST_CUT',
-            thumbnailUrl:
-              'https://via.placeholder.com/300x180.png?text=Best+Cut',
-            title: '베스트 컷 결과',
-            createdAt: formatKoreanTime(job.created_at),
-          }),
+          (job: BestcutJob): HomeHighlightItem => {
+            let thumbnailUrl = '';
+            try {
+              if (job.result_json) {
+                const cuts = JSON.parse(job.result_json) as { photo_url: string | null }[];
+                const first = cuts.find(c => c.photo_url);
+                if (first?.photo_url) {
+                  thumbnailUrl = first.photo_url.startsWith('http')
+                    ? first.photo_url
+                    : `${API_BASE}${first.photo_url}`;
+                }
+              }
+            } catch {}
+            return {
+              id: `bestcut-${job.id}`,
+              type: 'BEST_CUT',
+              thumbnailUrl,
+              title: '베스트 컷 결과',
+              createdAt: formatKoreanTime(job.created_at),
+            };
+          },
         );
 
         // 3) 하나의 배열로 합치고, 최신 순으로 정렬
@@ -131,11 +145,14 @@ export default function HomeScreen() {
     // if (item.type === 'BEST_CUT') router.push(`/best-cut-result?id=${item.id}`);
     // 지금은 일단 베스트컷 히스토리로 이동
     if (item.type === 'BEST_CUT') {
-      router.push('/best-cut-history');
+      const jobId = item.id.replace('bestcut-', '');
+      router.push(`/best-cut-result?jobId=${jobId}`);
     } else if (item.type === 'SHORTFORM') {
-      router.push('/shortform-list');
+      const jobId = item.id.replace('shortform-', '');
+      router.push(`/shortform-result?jobId=${jobId}`);
     } else {
-      router.push('/history');
+      const jobId = item.id.replace('analysis-', '');
+      router.push(`/analysis-result?jobId=${jobId}`);
     }
   };
 

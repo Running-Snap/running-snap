@@ -18,6 +18,13 @@ outputs/
 # MediaPipe 모델 파일 (용량 큰 바이너리)
 *.task
 
+# 로그
+server.log
+*.log
+
+# macOS
+.DS_Store
+
 # IDE
 .vscode/
 .idea/

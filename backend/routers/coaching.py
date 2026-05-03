@@ -2,14 +2,13 @@ import json
 import os
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, AnalysisJob, CoachingJob
 from core.schemas import CoachingJobCreate, CoachingJobResponse
 from core.security import get_current_user
-from core.utils import run_in_thread
 from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME
 from services.coaching import run_coaching_task
 
@@ -21,7 +20,6 @@ DEFAULT_COACHING = "좋은 자세를 유지하며 달리세요. 케이던스와 
 @router.post("/", response_model=CoachingJobResponse)
 async def create_coaching_job(
     body: CoachingJobCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -54,7 +52,7 @@ async def create_coaching_job(
     db.refresh(job)
 
     video_path = video.s3_url if (AWS_BUCKET_NAME and video.s3_url) else os.path.abspath(os.path.join(UPLOAD_FOLDER, video.filename))
-    background_tasks.add_task(run_in_thread, run_coaching_task, job.id, video_path, coaching_text)
+    run_coaching_task.delay(job.id, video_path, coaching_text)
     return job
 
 

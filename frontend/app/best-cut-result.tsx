@@ -32,7 +32,7 @@ export default function BestCutResultScreen() {
 
   const handleSaveCut = (cut: BestCut) => {
     if (cut.photo_url) {
-      Alert.alert('저장', `${cut.timestamp} 컷 저장 링크:\n${API_BASE}${cut.photo_url}`);
+      Alert.alert('저장', `${cut.timestamp} 컷 저장 링크:\n${cut.photo_url?.startsWith('http') ? cut.photo_url : `${API_BASE}${cut.photo_url}`}`);
     } else {
       Alert.alert('알림', '사진 파일이 없습니다.');
     }
@@ -75,7 +75,7 @@ export default function BestCutResultScreen() {
             <TouchableOpacity onPress={() => cut.photo_url && setViewingCut(cut)}>
               {cut.photo_url ? (
                 <Image
-                  source={{ uri: `${API_BASE}${cut.photo_url}` }}
+                  source={{ uri: cut.photo_url?.startsWith('http') ? cut.photo_url : `${API_BASE}${cut.photo_url}` }}
                   style={styles.cutImage}
                   resizeMode="cover"
                 />
@@ -111,7 +111,7 @@ export default function BestCutResultScreen() {
           </TouchableOpacity>
           {viewingCut?.photo_url && (
             <Image
-              source={{ uri: `${API_BASE}${viewingCut.photo_url}` }}
+              source={{ uri: viewingCut.photo_url.startsWith('http') ? viewingCut.photo_url : `${API_BASE}${viewingCut.photo_url}` }}
               style={styles.modalImage}
               resizeMode="contain"
             />

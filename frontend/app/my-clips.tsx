@@ -14,7 +14,7 @@ type ClipMatch = {
 };
 
 function ClipCard({ clip, formatTime }: { clip: ClipMatch; formatTime: (s: string | null) => string }) {
-  const player = useVideoPlayer(`${API_BASE}${clip.trimmed_url}`, p => { p.loop = false; });
+  const player = useVideoPlayer(clip.trimmed_url ? (clip.trimmed_url.startsWith('http') ? clip.trimmed_url : `${API_BASE}${clip.trimmed_url}`) : '', p => { p.loop = false; });
   return (
     <View style={styles.card}>
       <Text style={styles.cardDate}>{formatTime(clip.created_at)}</Text>

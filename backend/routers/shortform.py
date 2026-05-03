@@ -2,14 +2,13 @@ import json
 import os
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.models import User, Video, ShortformJob
 from core.schemas import ShortformJobCreate, ShortformJobResponse
 from core.security import get_current_user
-from core.utils import run_in_thread
 from core.config import UPLOAD_FOLDER, AWS_BUCKET_NAME, AWS_REGION
 from services.shortform import run_shortform_task
 
@@ -21,7 +20,6 @@ VALID_STYLES = ["action", "instagram", "tiktok", "humor", "documentary"]
 @router.post("/", response_model=ShortformJobResponse)
 async def create_shortform_job(
     body: ShortformJobCreate,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -50,7 +48,7 @@ async def create_shortform_job(
         video_paths = [f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/videos/{v.filename}" for v in videos]
     else:
         video_paths = [os.path.abspath(os.path.join(UPLOAD_FOLDER, v.filename)) for v in videos]
-    background_tasks.add_task(run_in_thread, run_shortform_task, job.id, video_paths, body.style, body.duration_sec)
+    run_shortform_task.delay(job.id, video_paths, body.style, body.duration_sec)
     return job
 
 

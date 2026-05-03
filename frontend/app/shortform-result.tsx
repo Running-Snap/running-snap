@@ -39,7 +39,7 @@ export default function ShortformResultScreen() {
   }, [jobId]);
 
   const videoUrl = outputFilename
-    ? `${API_BASE}/outputs/videos/${outputFilename}`
+    ? outputFilename.startsWith('http') ? outputFilename : `${API_BASE}/outputs/videos/${outputFilename}`
     : null;
 
   const player = useVideoPlayer(videoUrl ?? '');

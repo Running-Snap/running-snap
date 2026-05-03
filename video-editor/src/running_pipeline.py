@@ -284,10 +284,17 @@ class RunningPipeline:
             n = 15
             candidates = [round(orig * (0.05 + i * 0.90 / (n - 1)), 2) for i in range(n)]
 
+        _model_candidates = [
+            str(Path(__file__).parents[2] / "backend" / "pose_landmarker_heavy.task"),
+            "/home/ubuntu/backend/pose_landmarker_heavy.task",
+            "models/pose_landmarker_full.task",
+        ]
+        _model_path = next((p for p in _model_candidates if Path(p).exists()), "models/pose_landmarker_full.task")
+
         return find_best_poster_frame(
             video_path     = info.path,
             candidate_times    = candidates,
-            model_path         = "models/pose_landmarker_full.task",
+            model_path         = _model_path,
             target_size_ratio  = 0.65,   # 포스터: 러너가 화면의 65% 차지가 이상적
             verbose            = self.verbose,
         )
@@ -325,6 +332,13 @@ class RunningPipeline:
     ) -> None:
         skel_path = os.path.join(tmpdir, "skel.mp4")
 
+        _pose_model_candidates = [
+            str(Path(__file__).parents[2] / "backend" / "pose_landmarker_heavy.task"),
+            "/home/ubuntu/backend/pose_landmarker_heavy.task",
+            "models/pose_landmarker_full.task",
+        ]
+        _pose_model_path = next((p for p in _pose_model_candidates if Path(p).exists()), "models/pose_landmarker_full.task")
+
         # skeleton overlay
         try:
             from .pose_skeleton_renderer import apply_skeleton_feedback
@@ -333,7 +347,7 @@ class RunningPipeline:
                 output_video  = skel_path,
                 feedback_data = feedback_data,
                 loop_count    = info.loop_count,
-                model_path    = "models/pose_landmarker_full.task",
+                model_path    = _pose_model_path,
                 highlights    = highlights or None,
             )
             if not ok or not Path(skel_path).exists():

@@ -86,14 +86,19 @@ class VideoAnalyzer:
 
         self.console.print(f"[dim]분석할 프레임 수: {len(frames_data)}개[/dim]")
 
-        # 4. 프레임 분석 (병렬)
+        # 4. 프레임 분석 — 배치 우선, 없으면 병렬 개별 호출
         analysis_prompt = profile.get("analysis_prompt", "")
-        frame_analyses = await self._analyze_frames_parallel(
-            frames_data,
-            analysis_prompt,
-            max_concurrent,
-            show_progress
-        )
+        has_batch = hasattr(self.frame_analyzer, "analyze_frames_batch")
+        if has_batch and len(frames_data) > 1:
+            self.console.print(f"[green]배치 분석 모드: {len(frames_data)}장 → API 1회 호출[/green]")
+            frame_analyses = await self.frame_analyzer.analyze_frames_batch(frames_data)
+        else:
+            frame_analyses = await self._analyze_frames_parallel(
+                frames_data,
+                analysis_prompt,
+                max_concurrent,
+                show_progress,
+            )
 
         # 5. 결과 집계
         highlights = self._identify_highlights(frame_analyses)
@@ -234,38 +239,59 @@ class VideoAnalyzer:
         top_n: int = 5
     ) -> List[float]:
         """
-        하이라이트 순간 식별
-        - action_peak이 True인 프레임
-        - aesthetic_score가 높은 프레임
-        - motion_level이 높은 프레임
+        포스터용 최적 프레임 후보 선별.
+
+        우선 순위 (높은 순):
+          1. poster_score (Qwen 평가, 새 포맷) — 있으면 최우선
+          2. 기존 스코어 (aesthetic + motion + composition + action_peak)
+
+        필터링:
+          - runner_detected=False → 제외
+          - runner_size < 0.15   → 제외 (너무 작음)
+          - runner_center_x 가장자리 10% 초과 → 제외 (너무 치우침)
         """
-        # 점수 계산
         scored_frames = []
+        use_poster_score = any(f.poster_score > 0 for f in frames)
+
         for frame in frames:
-            score = 0.0
-            if frame.is_action_peak:
-                score += 0.4
-            score += frame.aesthetic_score * 0.3
-            score += frame.motion_level * 0.2
-            score += frame.composition_score * 0.1
+            # 탈락 조건 — poster_score 활용 시
+            if use_poster_score:
+                if not frame.runner_detected:
+                    continue
+                if frame.runner_size > 0 and frame.runner_size < 0.15:
+                    continue
+                if frame.runner_center_x < 0.10 or frame.runner_center_x > 0.90:
+                    continue
+                score = frame.poster_score
+                # 표정 보너스
+                if frame.face_expression_quality == "positive":
+                    score = min(1.0, score + 0.08)
+                # 팔다리 역동성 보너스
+                score = min(1.0, score + frame.limb_spread * 0.05)
+            else:
+                # 구 포맷 폴백
+                score = 0.0
+                if frame.is_action_peak:
+                    score += 0.4
+                score += frame.aesthetic_score * 0.3
+                score += frame.motion_level * 0.2
+                score += frame.composition_score * 0.1
 
             scored_frames.append((frame.timestamp, score))
 
-        # 상위 N개 선택 (최소 간격 유지)
-        scored_frames.sort(key=lambda x: x[1], reverse=True)
+        if not scored_frames:
+            # 필터 통과 없음 → 전체 대상으로 fallback
+            scored_frames = [(f.timestamp, f.aesthetic_score) for f in frames]
 
+        # 상위 N개 선택 (최소 1초 간격)
+        scored_frames.sort(key=lambda x: x[1], reverse=True)
         highlights = []
-        min_gap = 1.0  # 최소 1초 간격
+        min_gap = 1.0
 
         for timestamp, score in scored_frames:
             if len(highlights) >= top_n:
                 break
-
-            # 기존 하이라이트와 충분한 간격이 있는지 확인
-            is_far_enough = all(
-                abs(timestamp - h) >= min_gap for h in highlights
-            )
-            if is_far_enough:
+            if all(abs(timestamp - h) >= min_gap for h in highlights):
                 highlights.append(timestamp)
 
         return sorted(highlights)

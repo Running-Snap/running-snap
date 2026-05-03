@@ -36,8 +36,8 @@ _COLOR_GRADE: Dict[str, Dict[str, Any]] = {
 _C1, _C2, _C3 = 20, 50, 80
 # row1: Pace | Time | Calories
 # row2: Elevation | Avg HR | Cadence
-_R1_LBL, _R1_VAL = 58, 65   # row1 레이블 y%, 값 y%
-_R2_LBL, _R2_VAL = 74, 81   # row2 레이블 y%, 값 y%
+_R1_LBL, _R1_VAL = 60, 67   # row1 레이블 y%, 값 y%
+_R2_LBL, _R2_VAL = 78, 85   # row2 레이블 y%, 값 y%
 
 
 class CertBuilder:
@@ -264,7 +264,7 @@ class CertBuilder:
                 "start_ratio": ov_grid, "end_ratio": 1.00,
                 "animation_in": "fade_in",
                 "style": {
-                    "font_weight": 600, "font_size_ratio": 0.022,
+                    "font_weight": 600, "font_size_ratio": 0.018,
                     "color": "#CCCCCC", "opacity": 0.90,
                 },
             }
@@ -277,7 +277,7 @@ class CertBuilder:
                 "start_ratio": ov_grid, "end_ratio": 1.00,
                 "animation_in": "fade_in",
                 "style": {
-                    "font_weight": 800, "font_size_ratio": 0.050,
+                    "font_weight": 800, "font_size_ratio": 0.030,
                     "color": "#FFFFFF", "opacity": 1.0,
                 },
             }
@@ -311,7 +311,7 @@ class CertBuilder:
                 },
                 "animation_in": "fade_in",
                 "style": {
-                    "font_weight": 900, "font_size_ratio": 0.20,
+                    "font_weight": 900, "font_size_ratio": 0.13,
                     "color": "#FFFFFF", "opacity": 1.0,
                 },
             })

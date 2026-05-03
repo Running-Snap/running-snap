@@ -7,50 +7,96 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #000; color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  video { width: 100%; max-width: 480px; border-radius: 12px; }
-  #status { margin: 16px 0; font-size: 18px; font-weight: bold; text-align: center; }
+  #videoWrap { position: relative; width: 100%; max-width: 480px; overflow: hidden; border-radius: 12px; background: #000; }
+  video { width: 100%; display: block; transform-origin: center center; transition: transform 0.1s; }
+  #status { margin: 12px 0 6px; font-size: 18px; font-weight: bold; text-align: center; }
   .buttons { display: flex; gap: 16px; }
   button { padding: 16px 48px; font-size: 20px; border-radius: 50px; border: none; cursor: pointer; color: #fff; }
   #startBtn { background: #e00; }
   #stopBtn { background: #555; }
   button:disabled { background: #333; cursor: default; }
-  #log { margin-top: 12px; font-size: 12px; color: #aaa; text-align: center; max-width: 480px; line-height: 1.6; }
-  #gpsInput { display: none; margin: 8px 0; text-align: center; }
-  #gpsInput input { background: #222; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 180px; margin: 4px; }
-  #gpsInput button { padding: 8px 20px; font-size: 14px; border-radius: 20px; background: #e00; }
+  #zoomWrap { display: flex; align-items: center; gap: 10px; margin: 8px 0; width: 100%; max-width: 480px; }
+  #zoomWrap span { font-size: 20px; cursor: pointer; user-select: none; padding: 4px 8px; }
+  #zoomSlider { flex: 1; accent-color: #e00; }
+  #zoomLabel { font-size: 14px; color: #aaa; min-width: 40px; text-align: right; }
+  #qualityWrap { display: flex; align-items: center; gap: 10px; margin: 6px 0; width: 100%; max-width: 480px; }
+  #qualityWrap label { font-size: 14px; color: #aaa; }
+  #qualitySelect { flex: 1; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 6px 10px; font-size: 14px; }
+  #log { margin-top: 8px; font-size: 12px; color: #aaa; text-align: center; max-width: 480px; line-height: 1.6; }
 </style>
 </head>
 <body>
 
-<video id="preview" autoplay muted playsinline></video>
+<div id="videoWrap">
+  <video id="preview" autoplay muted playsinline></video>
+</div>
 <div id="status">준비 중...</div>
+<div id="qualityWrap">
+  <label>화질</label>
+  <select id="qualitySelect" onchange="changeQuality()">
+    <option value="480">480p (저화질)</option>
+    <option value="720">720p (보통)</option>
+    <option value="1080" selected>1080p (고화질)</option>
+    <option value="2160">4K (최고화질)</option>
+  </select>
+</div>
+<div id="zoomWrap">
+  <span onclick="adjustZoom(-0.5)">－</span>
+  <input id="zoomSlider" type="range" min="1" max="5" step="0.1" value="1" oninput="applyZoom(parseFloat(this.value))">
+  <span onclick="adjustZoom(0.5)">＋</span>
+  <div id="zoomLabel">1.0×</div>
+</div>
 <div class="buttons">
   <button id="startBtn" onclick="start()" disabled>시작</button>
   <button id="stopBtn" onclick="stop()">정지</button>
 </div>
-<div id="gpsInput">
-  <div style="color:#aaa; font-size:13px; margin-bottom:4px;">GPS 실패 - 좌표 직접 입력</div>
-  <input id="latInput" type="number" step="any" placeholder="위도 (예: 37.1234)" />
-  <input id="lngInput" type="number" step="any" placeholder="경도 (예: 127.1234)" />
-  <button onclick="setManualGps()">적용</button>
-</div>
 <div id="log"></div>
 
 <script>
-const SERVER = 'http://13.125.106.167:8000';
-const CLIP_DURATION = 20000;
-const OVERLAP_MS = 300; // 다음 클립을 300ms 먼저 시작해서 텀 제거
+const SERVER = window.location.origin;
+const CLIP_DURATION = 60000;
+const OVERLAP_MS = 300;
+const CAMERA_ID = new URLSearchParams(window.location.search).get('cam') || 'cam1';
 
 let stream = null;
 let recorder = null;
 let running = false;
-let cameraLat = 0;
-let cameraLng = 0;
 let clipCount = 0;
 let uploadCount = 0;
+let currentZoom = 1.0;
+let nativeZoomSupported = false;
+let nativeZoomMin = 1.0;
+let nativeZoomMax = 5.0;
+
+const QUALITY_MAP = {
+  '480':  { width: 854,  height: 480  },
+  '720':  { width: 1280, height: 720  },
+  '1080': { width: 1920, height: 1080 },
+  '2160': { width: 3840, height: 2160 },
+};
+
+function getVideoConstraints() {
+  const q = document.getElementById('qualitySelect')?.value || '1080';
+  const res = QUALITY_MAP[q];
+  return { facingMode: 'environment', width: { ideal: res.width }, height: { ideal: res.height } };
+}
+
+async function changeQuality() {
+  if (!stream) return;
+  const q = document.getElementById('qualitySelect').value;
+  log(`화질 변경 중... ${q}p`);
+  stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
+    document.getElementById('preview').srcObject = stream;
+    initZoom();
+    log(`화질 변경 완료: ${q}p`);
+  } catch (e) {
+    log(`화질 변경 실패: ${e.message}`);
+  }
+}
 
 const mimeType = (() => {
-  // 안드로이드 구형 Chrome은 webm이 안정적 → webm 우선
   const isAndroid = /Android/i.test(navigator.userAgent);
   const types = isAndroid
     ? ['video/webm;codecs=vp8', 'video/webm', 'video/mp4;codecs=avc1', 'video/mp4']
@@ -61,9 +107,6 @@ const mimeType = (() => {
   return 'video/webm';
 })();
 
-// 페이지 로드 시 선택된 mimeType 확인용
-console.log('선택된 mimeType:', mimeType);
-
 const logLines = [];
 function log(msg) {
   const time = new Date().toLocaleTimeString('ko-KR');
@@ -73,37 +116,53 @@ function log(msg) {
   console.log(msg);
 }
 
-function setManualGps() {
-  const lat = parseFloat(document.getElementById('latInput').value);
-  const lng = parseFloat(document.getElementById('lngInput').value);
-  if (isNaN(lat) || isNaN(lng)) { log('올바른 좌표를 입력해주세요'); return; }
-  cameraLat = lat;
-  cameraLng = lng;
-  document.getElementById('gpsInput').style.display = 'none';
-  log(`카메라 위치 설정: ${cameraLat.toFixed(6)}, ${cameraLng.toFixed(6)}`);
-}
-
 function setStatus(msg) {
   document.getElementById('status').textContent = msg;
 }
 
-async function init() {
-  setStatus('GPS 위치 확인 중...');
-  try {
-    const pos = await new Promise((res, rej) =>
-      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 })
-    );
-    cameraLat = pos.coords.latitude;
-    cameraLng = pos.coords.longitude;
-    log(`카메라 위치: ${cameraLat.toFixed(6)}, ${cameraLng.toFixed(6)}`);
-  } catch (e) {
-    log('GPS 실패 - 좌표를 직접 입력해주세요');
-    document.getElementById('gpsInput').style.display = 'block';
+function initZoom() {
+  const track = stream.getVideoTracks()[0];
+  const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+  if (capabilities.zoom) {
+    nativeZoomSupported = true;
+    nativeZoomMin = capabilities.zoom.min || 1.0;
+    nativeZoomMax = capabilities.zoom.max || 5.0;
+    const slider = document.getElementById('zoomSlider');
+    slider.min = nativeZoomMin;
+    slider.max = nativeZoomMax;
+    slider.step = 0.1;
+    slider.value = nativeZoomMin;
+    log('실제 카메라 줌 지원');
+  } else {
+    nativeZoomSupported = false;
+    log('디지털 줌 사용');
   }
+}
 
+function applyZoom(value) {
+  currentZoom = value;
+  document.getElementById('zoomLabel').textContent = value.toFixed(1) + '×';
+
+  if (nativeZoomSupported && stream) {
+    const track = stream.getVideoTracks()[0];
+    track.applyConstraints({ advanced: [{ zoom: value }] }).catch(() => {});
+  } else {
+    document.getElementById('preview').style.transform = `scale(${value})`;
+  }
+}
+
+function adjustZoom(delta) {
+  const slider = document.getElementById('zoomSlider');
+  const newVal = Math.min(parseFloat(slider.max), Math.max(parseFloat(slider.min), currentZoom + delta));
+  slider.value = newVal;
+  applyZoom(newVal);
+}
+
+async function init() {
   setStatus('카메라 연결 중...');
-  stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
   document.getElementById('preview').srcObject = stream;
+  initZoom();
 
   try {
     await navigator.wakeLock.request('screen');
@@ -112,7 +171,7 @@ async function init() {
     log('화면 꺼짐 방지 미지원');
   }
 
-  setStatus('시작 버튼을 누르세요');
+  setStatus(`시작 버튼을 누르세요 [${CAMERA_ID}]`);
   document.getElementById('startBtn').disabled = false;
 }
 
@@ -132,20 +191,16 @@ function stop() {
   log('녹화 정지');
 }
 
-
 async function recordLoop() {
   if (!running) return;
 
-  // 스트림이 살아있으면 재사용, 죽었을 때만 새로 가져옴
   const isStreamAlive = stream && stream.getTracks().every(t => t.readyState === 'live');
   if (!isStreamAlive) {
     try {
       if (stream) stream.getTracks().forEach(t => t.stop());
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      stream = await navigator.mediaDevices.getUserMedia({ video: getVideoConstraints(), audio: false });
       document.getElementById('preview').srcObject = stream;
+      initZoom();
       log('카메라 스트림 재연결');
     } catch (e) {
       log(`카메라 연결 실패: ${e.message}`);
@@ -182,32 +237,33 @@ async function recordLoop() {
     } else {
       log(`클립 ${clipNum} 크기 너무 작음 - 업로드 건너뜀`);
     }
-    // 다음 클립은 이미 미리 시작됨 - 여기서 호출 안 함
   };
 
   rec.start(1000);
   log(`클립 ${clipNum} 녹화 시작`);
 
-  // 다음 클립을 OVERLAP_MS 전에 미리 시작 → 텀 제거
   setTimeout(() => { if (running) recordLoop(); }, CLIP_DURATION - OVERLAP_MS);
-  // 현재 클립 종료
   setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, CLIP_DURATION);
 }
 
-async function uploadClip(blob, startTime, endTime, clipNum) {
+async function uploadClip(blob, startTime, endTime, clipNum, attempt = 1) {
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 5000;
+
   const formData = new FormData();
   const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
   formData.append('file', blob, `clip.${ext}`);
-  formData.append('camera_lat', cameraLat);
-  formData.append('camera_lng', cameraLng);
   formData.append('clip_start', startTime.toISOString());
   formData.append('clip_end', endTime.toISOString());
+  formData.append('camera_id', CAMERA_ID);
 
   try {
+    if (attempt > 1) log(`클립 ${clipNum} 재시도 중... (${attempt}/${MAX_ATTEMPTS})`);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000); // 60초 타임아웃
+    const timeout = setTimeout(() => controller.abort(), 120000);
     const res = await fetch(`${SERVER}/camera-clip`, {
       method: 'POST',
+      headers: { 'ngrok-skip-browser-warning': 'true' },
       body: formData,
       signal: controller.signal,
     });
@@ -216,11 +272,33 @@ async function uploadClip(blob, startTime, endTime, clipNum) {
     uploadCount++;
     log(`클립 ${clipNum} 업로드 완료 (clip_id=${data.clip_id}, 총 ${uploadCount}개)`);
   } catch (e) {
-    if (e.name === 'AbortError') {
-      log(`클립 ${clipNum} 업로드 타임아웃`);
+    const reason = e.name === 'AbortError' ? '타임아웃' : e.message;
+    if (attempt < MAX_ATTEMPTS) {
+      log(`클립 ${clipNum} 업로드 실패 (${reason}) → ${RETRY_DELAY_MS/1000}초 후 재시도`);
+      setTimeout(() => uploadClip(blob, startTime, endTime, clipNum, attempt + 1), RETRY_DELAY_MS);
     } else {
-      log(`클립 ${clipNum} 업로드 실패: ${e.message}`);
+      log(`클립 ${clipNum} 업로드 최종 실패 (${MAX_ATTEMPTS}회 시도) - 로컬 저장 중...`);
+      saveLocally(blob, clipNum);
     }
+  }
+}
+
+function saveLocally(blob, clipNum) {
+  try {
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `clip_${clipNum}_${ts}.${ext}`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    log(`클립 ${clipNum} 로컬 저장 완료: ${filename}`);
+  } catch (e) {
+    log(`클립 ${clipNum} 로컬 저장 실패: ${e.message}`);
   }
 }
 

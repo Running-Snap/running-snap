@@ -33,10 +33,12 @@ def _get_editor_config():
     return VideoEditorConfig(mode=ProcessingMode.MOCK, output_dir=OUTPUT_FOLDER, cache_enabled=False)
 
 
+from core.celery_app import celery_app
 from services.video import upload_to_s3, download_from_s3_if_needed
 
 
-def run_shortform_task(job_id: int, video_paths: list, style: str, duration_sec: float):
+@celery_app.task(name="shortform.run", bind=True, max_retries=2)
+def run_shortform_task(self, job_id: int, video_paths: list, style: str, duration_sec: float):
     db = SessionLocal()
     tmp_path = None
     try:

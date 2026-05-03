@@ -180,7 +180,12 @@ class VideoRenderer:
 
         # 1. 구간 추출
         try:
-            clip = source.subclipped(segment.source_start, segment.source_end)
+            src_duration = source.duration or 0.0
+            start = max(float(segment.source_start), 0.0)
+            end   = min(float(segment.source_end), src_duration - 0.001)
+            if end <= start:
+                end = min(start + 0.1, src_duration - 0.001)
+            clip = source.subclipped(start, end)
         except Exception as e:
             raise RenderError(
                 f"구간 추출 실패 ({segment.source_start}-{segment.source_end}): {e}"

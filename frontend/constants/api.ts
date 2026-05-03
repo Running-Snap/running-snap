@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─────────────────────────────────────────
 // API 기본 URL 설정
 // ─────────────────────────────────────────
-export const API_BASE = 'http://localhost:8000';
+export const API_BASE = 'http://13.125.106.167:8000';
 
 // ─────────────────────────────────────────
 // 인증 토큰 저장 (AsyncStorage → 앱 재시작 후에도 유지)
@@ -78,7 +78,7 @@ export async function apiUploadVideo(
   uri: string,
   mimeType?: string,
   fileName?: string,
-): Promise<{ video_id: number; filename: string }> {
+): Promise<{ video_id: number; filename: string; analysis_job_id: number; bestcut_job_id: number; shortform_job_id: number }> {
   // 확장자 결정
   const ext = mimeType === 'video/quicktime' ? '.mov'
             : mimeType === 'video/mp4'       ? '.mp4'
