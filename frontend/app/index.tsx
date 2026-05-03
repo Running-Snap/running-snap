@@ -1,9 +1,25 @@
 import { Redirect } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
-import { useParticipantSession } from '@/ctx/participant-session';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { loadToken } from '@/constants/api';
 
 export default function Index() {
-  const { participantNumber, isLoading } = useParticipantSession();
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasToken, setHasToken] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const token = await loadToken();
+        setHasToken(!!token);
+      } catch (e) {
+        setHasToken(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    init();
+  }, []);
 
   if (isLoading) {
     return (
@@ -13,11 +29,9 @@ export default function Index() {
     );
   }
 
-  // 참가자 번호 없으면 입력 화면으로
-  if (!participantNumber) {
-    return <Redirect href="/participant-entry" />;
+  if (!hasToken) {
+    return <Redirect href="/login" />;
   }
 
-  // 있으면 홈으로
   return <Redirect href="/(tabs)" />;
 }
