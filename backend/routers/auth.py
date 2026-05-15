@@ -43,6 +43,14 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login-json", response_model=Token)
 async def login_json(req: LoginRequest, db: Session = Depends(get_db)):
+    # 배번호로 로그인 시도 (숫자만 입력된 경우 bib_number 컬럼도 확인)
+    if req.email.strip().isdigit():
+        user = db.query(User).filter(User.bib_number == req.email.strip()).first()
+        if user:
+            token = create_access_token({"sub": user.username}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+            return {"access_token": token, "token_type": "bearer"}
+
+    # 일반 이메일/아이디 로그인
     user = db.query(User).filter((User.username == req.email) | (User.email == req.email)).first()
     if not user or not verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="잘못된 아이디 또는 비밀번호")
@@ -66,6 +74,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+# ─── 배번호 목록 조회 (인증 없이 누구나) ────────────────────
+@router.get("/bib-list")
+async def get_bib_list(db: Session = Depends(get_db)):
+    bibs = db.query(User.bib_number).filter(User.bib_number.isnot(None)).order_by(User.bib_number).all()
+    return {"bib_numbers": [b[0] for b in bibs]}
+
 
 # ─── ✅ 새로 추가: 배번호 로그인 ────────────────────────────
 

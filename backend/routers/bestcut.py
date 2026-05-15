@@ -55,7 +55,7 @@ async def create_bestcut_job(
         "pace":         body.poster_pace,
         "color_scheme": body.poster_color_scheme,
     }
-    run_bestcut_task.delay(job.id, video_paths, body.photo_count, poster_config)
+    run_bestcut_task.delay(job.id, video_paths, body.photo_count, poster_config, user_id=current_user.id, bib=current_user.bib_number or "")
     return job
 
 
