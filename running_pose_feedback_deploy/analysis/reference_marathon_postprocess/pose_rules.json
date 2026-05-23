@@ -1,0 +1,41 @@
+{
+  "version": "2",
+  "method": "pose_pipeline postprocess + 4-axis (cadence|arm_swing|stride|foot_strike)",
+  "framework": "cadence | arm_swing | stride | foot_strike",
+  "min_axes_abnormal": 2,
+  "severity_threshold": 0.5,
+  "calibration_n_videos": 21,
+  "axes": {
+    "cadence": {
+      "label_ko": "케이던스",
+      "spm_min": 46.37,
+      "spm_max": 106.16,
+      "description": "주기 기반 분당 스텝 수 (SPM)"
+    },
+    "arm_swing": {
+      "label_ko": "팔 스윙",
+      "symmetry_max_deg": 89.36,
+      "symmetry_p90_max_deg": 125.0,
+      "lr_median_gap_deg_min": 51.0,
+      "phase_severity_min": 2.73,
+      "critical_severity": 3.0,
+      "description": "팔꿈치 phase 편차 + 좌우 대칭(median/p90/L-R median gap)"
+    },
+    "stride": {
+      "label_ko": "보폭",
+      "overstride_forward_max": 0.1728,
+      "phase_severity_min": 4.87,
+      "critical_severity": 3.0,
+      "description": "발 전방 위치(overstride 프록시) + 무릎/상체 phase"
+    },
+    "foot_strike": {
+      "label_ko": "착지 패턴",
+      "heel_drop_max": 0.055,
+      "contact_time_min_sec": 0.221,
+      "contact_time_max_sec": 0.517,
+      "severity_min": 3.56,
+      "critical_severity": 3.0,
+      "description": "heel drop, 접지 시간, 발목 각도 프록시"
+    }
+  }
+}

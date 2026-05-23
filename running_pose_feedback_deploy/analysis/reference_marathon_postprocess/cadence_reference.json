@@ -1,0 +1,9 @@
+{
+  "n_tracks": 21,
+  "cadence_median": 85.71,
+  "cadence_p10": 54.55,
+  "cadence_p90": 92.31,
+  "duration_median": 0.7,
+  "duration_p10": 0.65,
+  "duration_p90": 1.1
+}

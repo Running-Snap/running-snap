@@ -1,0 +1,18 @@
+{
+  "version": "legacy_1",
+  "method": "postprocess phase — 4 joint metrics (L/R elbow, L/R knee) p10-p90",
+  "framework": "left_elbow | right_elbow | left_knee | right_knee (phase p10-p90)",
+  "metrics": [
+    "left_elbow_deg",
+    "right_elbow_deg",
+    "left_knee_deg",
+    "right_knee_deg"
+  ],
+  "bad_score_threshold": 4.56,
+  "min_issues_for_bad": 2,
+  "min_score_for_issues": 1.5,
+  "severity_threshold": 0.5,
+  "calibration_n_videos": 21,
+  "calibration_score_p50": 0.705,
+  "calibration_score_p95": 4.56
+}
