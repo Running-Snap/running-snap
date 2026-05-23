@@ -1,0 +1,78 @@
+{
+  "dataset": "Marathon_good_pose",
+  "method": "pose_pipeline postprocess + 4-axis (cadence|arm_swing|stride|foot_strike)",
+  "n_videos_total": 22,
+  "n_pose_exported": 22,
+  "n_phase_profiles": 21,
+  "n_skipped_profiles": 1,
+  "skipped": [
+    "서원준_좋은자세3"
+  ],
+  "frame_stride": 3,
+  "pose_rules": {
+    "version": "2",
+    "method": "pose_pipeline postprocess + 4-axis (cadence|arm_swing|stride|foot_strike)",
+    "framework": "cadence | arm_swing | stride | foot_strike",
+    "min_axes_abnormal": 2,
+    "severity_threshold": 0.5,
+    "calibration_n_videos": 21,
+    "axes": {
+      "cadence": {
+        "label_ko": "케이던스",
+        "spm_min": 46.37,
+        "spm_max": 106.16,
+        "description": "주기 기반 분당 스텝 수 (SPM)"
+      },
+      "arm_swing": {
+        "label_ko": "팔 스윙",
+        "symmetry_max_deg": 89.36,
+        "phase_severity_min": 2.73,
+        "critical_severity": 3.0,
+        "description": "팔꿈치 phase 편차 + 좌우 대칭"
+      },
+      "stride": {
+        "label_ko": "보폭",
+        "overstride_forward_max": 0.1728,
+        "phase_severity_min": 4.87,
+        "critical_severity": 3.0,
+        "description": "발 전방 위치(overstride 프록시) + 무릎/상체 phase"
+      },
+      "foot_strike": {
+        "label_ko": "착지 패턴",
+        "heel_drop_max": 0.055,
+        "contact_time_min_sec": 0.221,
+        "contact_time_max_sec": 0.517,
+        "severity_min": 3.56,
+        "critical_severity": 3.0,
+        "description": "heel drop, 접지 시간, 발목 각도 프록시"
+      }
+    }
+  },
+  "pose_rules_legacy": {
+    "version": "legacy_1",
+    "method": "postprocess phase — 4 joint metrics (L/R elbow, L/R knee) p10-p90",
+    "framework": "left_elbow | right_elbow | left_knee | right_knee (phase p10-p90)",
+    "metrics": [
+      "left_elbow_deg",
+      "right_elbow_deg",
+      "left_knee_deg",
+      "right_knee_deg"
+    ],
+    "bad_score_threshold": 4.56,
+    "min_issues_for_bad": 2,
+    "min_score_for_issues": 1.5,
+    "severity_threshold": 0.5,
+    "calibration_n_videos": 21,
+    "calibration_score_p50": 0.705,
+    "calibration_score_p95": 4.56
+  },
+  "cadence_reference": {
+    "n_tracks": 21,
+    "cadence_median": 85.71,
+    "cadence_p10": 54.55,
+    "cadence_p90": 92.31,
+    "duration_median": 0.7,
+    "duration_p10": 0.65,
+    "duration_p90": 1.1
+  }
+}

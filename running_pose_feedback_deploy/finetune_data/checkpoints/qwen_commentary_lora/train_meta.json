@@ -1,0 +1,6 @@
+{
+  "n_samples": 53,
+  "text_only": false,
+  "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "epochs": 3
+}
