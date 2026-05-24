@@ -36,7 +36,7 @@ async def create_bestcut_job(
     job = BestCutJob(
         user_id=current_user.id, video_id=videos[0].id,
         video_ids_json=json.dumps(body.video_ids),
-        photo_count=body.photo_count, status="pending",
+        photo_count=body.photo_count, mode=body.mode, status="pending",
     )
     db.add(job)
     db.commit()
@@ -55,9 +55,8 @@ async def create_bestcut_job(
         "pace":         body.poster_pace,
         "color_scheme": body.poster_color_scheme,
     }
-    run_bestcut_task.delay(job.id, video_paths, body.photo_count, poster_config, user_id=current_user.id, bib=current_user.bib_number or "")
+    run_bestcut_task.delay(job.id, video_paths, body.photo_count, poster_config, user_id=current_user.id, bib=current_user.bib_number or "", mode=body.mode)
     return job
-
 
 @router.get("/", response_model=List[BestCutJobResponse])
 async def list_bestcut_jobs(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -223,7 +223,7 @@ const certItems: HomeHighlightItem[] = doneCerts.map(
       <View style={styles.header}>
         <Text style={styles.welcomeText}>나만의 러닝 하이라이트</Text>
         <Text style={styles.subtitle}>
-          이미 생성된 베스트 컷과 숏폼, 자세 피드백을 모아봤어요
+          이미 생성된 베스트 컷과 인증영상, 자세 피드백을 모아봤어요
         </Text>
       </View>
 
@@ -277,7 +277,7 @@ const certItems: HomeHighlightItem[] = doneCerts.map(
 
         {/* 숏폼 기록 */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>내 숏폼</Text>
+          <Text style={styles.sectionTitle}>내 인증영상</Text>
           <TouchableOpacity onPress={() => router.push('/shortform-list')}>
             <Text style={styles.seeAllButton}>전체 보기 ›</Text>
           </TouchableOpacity>
@@ -286,7 +286,7 @@ const certItems: HomeHighlightItem[] = doneCerts.map(
           style={styles.recordPreviewCard}
           onPress={() => router.push('/shortform-list')}
         >
-          <Text style={styles.emptyStateText}>🎬 숏폼 기록 보러가기</Text>
+          <Text style={styles.emptyStateText}>🏅 인증영상 기록 보러가기</Text>
           <Text style={styles.arrowIcon}>›</Text>
         </TouchableOpacity>
 

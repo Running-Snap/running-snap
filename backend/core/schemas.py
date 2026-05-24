@@ -67,6 +67,7 @@ class ShortformJobResponse(BaseModel):
 class BestCutJobCreate(BaseModel):
     video_ids: List[int]        # 영상 ID 목록 (최소 1개, 프론트에서 업로드 후 받은 video_id들)
     photo_count: int = 5
+    mode: str = "both"
     # 포스터 설정 (선택)
     poster_title:       Optional[str] = "2026\nMIRACLE MARATHON"
     poster_location:    Optional[str] = "Daejeon, Republic of Korea"
@@ -82,6 +83,7 @@ class BestCutJobResponse(BaseModel):
     video_id: Optional[int] = None
     video_ids_json: Optional[str] = None
     photo_count: int
+    mode: str
     status: str
     result_json: Optional[str] = None
     created_at: Optional[datetime] = None

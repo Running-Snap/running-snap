@@ -278,17 +278,27 @@ export type BestcutJob = {
   status: string;
   result_json: string | null;
   photo_count: number;
+  mode: string;
   video_ids_json: string | null;
   created_at: string;
 };
 
 export async function apiCreateBestcutJob(
-  videoIds: number[], photoCount: number
+  videoIds: number[], photoCount: number, mode: string = 'both',
+  // posterConfig?: {                             
+  //   poster_title?: string;
+  //   poster_location?: string;
+  //   poster_sublocation?: string;
+  //   poster_distance_km?: number;
+  //   poster_run_time?: string;
+  //   poster_pace?: string;
+  //   poster_color_scheme?: string;
+  // },
 ): Promise<BestcutJob> {
   const res = await fetch(`${API_BASE}/bestcut-jobs/`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ video_ids: videoIds, photo_count: photoCount }),
+    body: JSON.stringify({ video_ids: videoIds, photo_count: photoCount, mode,}),
   });
   if (!res.ok) throw new Error('베스트 컷 작업 생성 실패');
   return res.json();

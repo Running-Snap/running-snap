@@ -55,6 +55,7 @@ class BestCutJob(Base):
     video_id = Column(Integer, ForeignKey("videos.id"))
     video_ids_json = Column(Text, nullable=True)        # 전체 video_id 목록 (JSON 배열)
     photo_count = Column(Integer, default=5)            # 추출할 사진 개수
+    mode = Column(String, default="both")            
     status = Column(String, default="pending")          # pending / processing / done / failed
     result_json = Column(Text, nullable=True)           # JSON 배열: [{timestamp, photo_url, description}]
     created_at = Column(DateTime, default=datetime.utcnow)

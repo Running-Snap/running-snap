@@ -11,9 +11,11 @@ type BestCut = {
   timestamp: string;
   description: string;
 };
+
+type TabType = 'bestcut' | 'poster';
+
 const getCutUri = (cut: BestCut) => {
   if (!cut.photo_url) return null;
-
   return cut.photo_url.startsWith('http')
     ? cut.photo_url
     : `${API_BASE}${cut.photo_url}`;
@@ -21,44 +23,55 @@ const getCutUri = (cut: BestCut) => {
 
 export default function BestCutResultScreen() {
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
-  const [cuts, setCuts] = useState<BestCut[]>([]);
+  const [bestcuts, setBestcuts] = useState<BestCut[]>([]);
+  const [posters, setPosters]   = useState<BestCut[]>([]);
+  const [mode, setMode]         = useState<string>('both');
+  const [activeTab, setActiveTab] = useState<TabType>('bestcut');
   const [isLoading, setIsLoading] = useState(true);
   const [viewingCut, setViewingCut] = useState<BestCut | null>(null);
 
   useEffect(() => {
-  if (!jobId) return;
-  apiGetBestcutJob(Number(jobId))
-    .then(job => {
-      if (job.result_json) {
-        const parsed = JSON.parse(job.result_json);
-        // ✅ { bestcut: [...], poster: [...] } 구조 대응
-        const cutsArray = Array.isArray(parsed)
-          ? parsed
-          : parsed.bestcut ?? [];
-        setCuts(cutsArray);
-      }
-    })
-    .catch(() => {})
-    .finally(() => setIsLoading(false));
-}, [jobId]);
+    if (!jobId) return;
+    apiGetBestcutJob(Number(jobId))
+      .then(job => {
+        // mode 저장
+        if (job.mode) setMode(job.mode);
 
- const handleSaveCut = (cut: BestCut) => {
-  const uri = getCutUri(cut);
+        if (job.result_json) {
+          const parsed = JSON.parse(job.result_json);
+          if (Array.isArray(parsed)) {
+            // 구버전 호환: 배열이면 bestcut으로 처리
+            setBestcuts(parsed);
+          } else {
+            setBestcuts(parsed.bestcut ?? []);
+            setPosters(parsed.poster ?? []);
+          }
+        }
 
-  if (uri) {
-    Alert.alert('저장', `${cut.timestamp} 컷 저장 링크:\n${uri}`);
-  } else {
-    Alert.alert('알림', '사진 파일이 없습니다.');
-  }
-};
+        // mode에 따라 기본 탭 결정
+        if (job.mode === 'poster') setActiveTab('poster');
+        else setActiveTab('bestcut');
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [jobId]);
 
+  const activeCuts = activeTab === 'bestcut' ? bestcuts : posters;
+
+  const handleSaveCut = (cut: BestCut) => {
+    const uri = getCutUri(cut);
+    if (uri) {
+      Alert.alert('저장', `${cut.timestamp} 컷 저장 링크:\n${uri}`);
+    } else {
+      Alert.alert('알림', '사진 파일이 없습니다.');
+    }
+  };
 
   const handleSaveAll = () => {
-    Alert.alert('저장 완료', `${cuts.length}개의 베스트 컷 정보를 확인하세요.`);
+    Alert.alert('저장 완료', `${activeCuts.length}개의 ${activeTab === 'bestcut' ? '베스트 컷' : '포스터'} 정보를 확인하세요.`);
   };
 
   if (isLoading) {
-
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF9500" />
@@ -66,56 +79,86 @@ export default function BestCutResultScreen() {
       </View>
     );
   }
-const viewingUri = viewingCut ? getCutUri(viewingCut) : null;
+
+  const viewingUri = viewingCut ? getCutUri(viewingCut) : null;
+  const showTabs = mode === 'both';
 
   return (
     <View style={styles.container}>
+      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}>
           <Text style={styles.backButton}>← 뒤로</Text>
         </TouchableOpacity>
         <Text style={styles.title}>베스트 컷 결과</Text>
-        <Text style={styles.subtitle}>총 {cuts.length}개의 베스트 컷</Text>
+        <Text style={styles.subtitle}>총 {activeCuts.length}개</Text>
       </View>
 
+      {/* 탭 — mode === 'both'일 때만 표시 */}
+      {showTabs && (
+        <View style={styles.tabBar}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'bestcut' && styles.tabActive]}
+            onPress={() => setActiveTab('bestcut')}
+          >
+            <Text style={[styles.tabText, activeTab === 'bestcut' && styles.tabTextActive]}>
+              📸 원본 컷 ({bestcuts.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'poster' && styles.tabActive]}
+            onPress={() => setActiveTab('poster')}
+          >
+            <Text style={[styles.tabText, activeTab === 'poster' && styles.tabTextActive]}>
+              🖼️ 포스터 ({posters.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView style={styles.content}>
+        {/* 요약 카드 */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryIcon}>🏆</Text>
-          <Text style={styles.summaryTitle}>베스트 컷 추출 완료!</Text>
+          <Text style={styles.summaryIcon}>
+            {activeTab === 'poster' ? '🖼️' : '🏆'}
+          </Text>
+          <Text style={styles.summaryTitle}>
+            {activeTab === 'poster' ? '포스터 생성 완료!' : '베스트 컷 추출 완료!'}
+          </Text>
           <Text style={styles.summaryText}>
-            AI가 영상에서 {cuts.length}개의{'\n'}최고의 순간을 찾아냈어요
+            AI가 {activeCuts.length}개의{'\n'}
+            {activeTab === 'poster' ? '포스터를 만들었어요' : '최고의 순간을 찾아냈어요'}
           </Text>
         </View>
 
-        {cuts.map((cut, index) => {
-            const uri = getCutUri(cut);
-            return (
-          <View key={index} style={styles.cutCard}>
-            <TouchableOpacity onPress={() => uri && setViewingCut(cut)}>
-              {uri ? (
-          <Image
-            source={{ uri }}
-            style={styles.cutImage}
-            resizeMode="cover"
-          />
-              ) : (
-                <View style={styles.cutImagePlaceholder}>
-                  <Text style={styles.cutImageIcon}>📸</Text>
-                  <Text style={styles.cutTimestamp}>{cut.timestamp}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <View style={styles.cutInfo}>
-              <Text style={styles.cutNumber}>베스트 컷 {index + 1}</Text>
-              <Text style={styles.cutDescription}>{cut.description}</Text>
-              <Text style={styles.cutTime}>📍 영상 {cut.timestamp} 지점</Text>
+        {/* 컷 목록 */}
+        {activeCuts.map((cut, index) => {
+          const uri = getCutUri(cut);
+          return (
+            <View key={index} style={styles.cutCard}>
+              <TouchableOpacity onPress={() => uri && setViewingCut(cut)}>
+                {uri ? (
+                  <Image source={{ uri }} style={styles.cutImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.cutImagePlaceholder}>
+                    <Text style={styles.cutImageIcon}>📸</Text>
+                    <Text style={styles.cutTimestamp}>{cut.timestamp}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <View style={styles.cutInfo}>
+                <Text style={styles.cutNumber}>
+                  {activeTab === 'poster' ? `포스터 ${index + 1}` : `베스트 컷 ${index + 1}`}
+                </Text>
+                <Text style={styles.cutDescription}>{cut.description}</Text>
+                <Text style={styles.cutTime}>📍 영상 {cut.timestamp} 지점</Text>
+              </View>
+              <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveCut(cut)}>
+                <Text style={styles.saveButtonText}>저장</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveCut(cut)}>
-              <Text style={styles.saveButtonText}>저장</Text>
-            </TouchableOpacity>
-          </View>
-            );
-})}
+          );
+        })}
       </ScrollView>
 
       {/* 전체화면 이미지 모달 */}
@@ -130,12 +173,12 @@ const viewingUri = viewingCut ? getCutUri(viewingCut) : null;
             <Text style={styles.modalCloseText}>✕</Text>
           </TouchableOpacity>
           {viewingUri && (
-  <Image
-    source={{ uri: viewingUri }}
-    style={styles.modalImage}
-    resizeMode="contain"
-  />
-)}
+            <Image
+              source={{ uri: viewingUri }}
+              style={styles.modalImage}
+              resizeMode="contain"
+            />
+          )}
           <View style={styles.modalInfo}>
             <Text style={styles.modalDescription}>{viewingCut?.description}</Text>
             <Text style={styles.modalTimestamp}>📍 {viewingCut?.timestamp}</Text>
@@ -143,9 +186,12 @@ const viewingUri = viewingCut ? getCutUri(viewingCut) : null;
         </View>
       </Modal>
 
+      {/* 푸터 */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.saveAllButton} onPress={handleSaveAll}>
-          <Text style={styles.saveAllButtonText}>전체 저장 ({cuts.length}개)</Text>
+          <Text style={styles.saveAllButtonText}>
+            전체 저장 ({activeCuts.length}개)
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.homeButton} onPress={() => router.replace('/(tabs)')}>
           <Text style={styles.homeButtonText}>홈으로 돌아가기</Text>
@@ -166,6 +212,18 @@ const styles = StyleSheet.create({
   backButton: { fontSize: 16, color: '#007AFF', marginBottom: 16 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#000', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#666' },
+  // 탭바
+  tabBar: {
+    flexDirection: 'row', backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  },
+  tab: {
+    flex: 1, paddingVertical: 14, alignItems: 'center',
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  },
+  tabActive: { borderBottomColor: '#FF9500' },
+  tabText: { fontSize: 14, fontWeight: '600', color: '#999' },
+  tabTextActive: { color: '#FF9500' },
   content: { flex: 1, padding: 16 },
   summaryCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 24,
@@ -215,12 +273,7 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width - 32,
     height: Dimensions.get('window').height * 0.6,
   },
-  modalInfo: {
-    paddingHorizontal: 24, paddingTop: 20, alignItems: 'center',
-  },
-  modalDescription: {
-    color: '#fff', fontSize: 16, fontWeight: '600',
-    textAlign: 'center', marginBottom: 8,
-  },
+  modalInfo: { paddingHorizontal: 24, paddingTop: 20, alignItems: 'center' },
+  modalDescription: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 8 },
   modalTimestamp: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
 });
